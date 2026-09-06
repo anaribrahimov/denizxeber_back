@@ -8,6 +8,7 @@ export class CreateLanguageTable1788432487008 implements MigrationInterface {
       `CREATE TABLE \`languages\` (
         \`id\` int NOT NULL AUTO_INCREMENT,
         \`name\` varchar(10) NOT NULL,
+        UNIQUE INDEX \`IDX_languages_name\` (\`name\`), 
         PRIMARY KEY (\`id\`)
       ) ENGINE=InnoDB`
     );
@@ -28,6 +29,7 @@ export class CreateLanguageTable1788432487008 implements MigrationInterface {
     if (['production', 'prod', 'stage'].includes(env)) {
       throw new Error('Cannot revert migration in production or stage environment');
     }
+    await queryRunner.query(`DROP INDEX \`IDX_languages_name\` ON \`languages\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`languages\``);
   }
 
