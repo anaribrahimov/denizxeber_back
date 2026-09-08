@@ -9,6 +9,10 @@ import { AppService } from './app.service.js';
 import { appConfig } from './config/app.config.js';
 import { databaseConfig } from './config/database.config.js';
 import { LanguagesModule } from './language/languages.module.js';
+import { UsersModule } from './users/users.module.js';
+import { RolesModule } from './roles/roles.module.js';
+import { UploadsModule } from './uploads/uploads.module.js';
+import { storageConfig } from './config/storage.config.js';
 
 @Module({
   imports: [
@@ -18,6 +22,7 @@ import { LanguagesModule } from './language/languages.module.js';
       load: [
         appConfig,
         databaseConfig,
+        storageConfig,
       ],
 
       envFilePath: [
@@ -47,6 +52,9 @@ import { LanguagesModule } from './language/languages.module.js';
     }),
 
     LanguagesModule,
+    UploadsModule,
+    RolesModule,
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

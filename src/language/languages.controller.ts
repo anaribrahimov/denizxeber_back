@@ -1,6 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
 import { LanguagesService } from './languages.service.js';
-import { Language } from './language.entity.js';
 
 @Controller('api/languages')
 export class LanguagesController {
