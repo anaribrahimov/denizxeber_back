@@ -1,4 +1,4 @@
-import { Body, ClassSerializerInterceptor, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, Patch, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, Patch, Post, Query, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto.js";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { MAX_IMAGE_SIZE, multerStorageConfig, profileImageFileFilter } from "../common/multer/multer.config.js";
@@ -6,6 +6,8 @@ import { UsersService } from "./users.service.js";
 import { UserResponseDTO } from "./dto/user-response.dto.js";
 import { UpdateUserDTO } from "./dto/update-user.dto.js";
 import { FileCleanupInterceptor } from "../common/interceptors/file-cleanup.interceptor.js";
+import { PaginateUserDto } from "./dto/paginate-user.dto.js";
+import { PaginatedResult } from "../common/interfaces/paginated-result.interface.js";
 
 @Controller('/admin/users')
 export class UsersController {
@@ -87,5 +89,11 @@ export class UsersController {
   async find(@Param('id') id: number) {
     const user: UserResponseDTO = await this.usersService.find(id);
     return { data: user };
+  }
+
+  @Get()
+  async findPaginated(@Query() query: PaginateUserDto): Promise<PaginatedResult<UserResponseDTO>> {
+    const paginated: PaginatedResult<UserResponseDTO> = await this.usersService.findPaginated(query);
+    return paginated;
   }
 }

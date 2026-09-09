@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, Search } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { User } from './user.entity.js';
 import { DataSource, Repository } from 'typeorm';
@@ -15,6 +15,8 @@ import { deleteFile } from '../common/utils/storage.util.js';
 import { UpdateUserDTO } from './dto/update-user.dto.js';
 import { hashPassword } from '../common/utils/auth.util.js';
 import { InjectRepository } from '@nestjs/typeorm';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface.js';
+import { PaginateUserDto } from './dto/paginate-user.dto.js';
 
 @Injectable()
 export class UsersService {
@@ -229,5 +231,38 @@ export class UsersService {
     const languages: Language[] = await this.languageRepository.find();
 
     return UserMapper.toResponseDTO(user, languages);
-  }  
+  }
+
+  async findPaginated(query: PaginateUserDto): Promise<PaginatedResult<UserResponseDTO>> {
+    const { limit, page, search } = query;
+
+    const qb = this.usersRepository
+      .createQueryBuilder('users')
+      .leftJoinAndSelect('users.role', 'roles');
+
+    const languages: Language[] = await this.languageRepository.find();
+
+    if (search) {
+      qb.andWhere(
+        '(users.email LIKE :search OR users.first_name LIKE :search OR users.last_name LIKE :search)',
+        { search: `%${search}%` }
+      )
+    }
+
+    qb.orderBy('users.id', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data: data.map((item: User) => UserMapper.toResponseDTO(item, languages)),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      }
+    }
+  }
 }
