@@ -48,6 +48,7 @@ import { storageConfig } from './config/storage.config.js';
         autoLoadEntities: true,
 
         synchronize: false, // Set to false in production to avoid data loss
+        timezone: 'Z', // ⭐ Forces TypeORM to use UTC instead of the server's local time zone
       }),
     }),
 

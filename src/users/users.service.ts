@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { User } from './user.entity.js';
-import { DataSource } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Role } from '../roles/role.entity.js';
 import { ValidationException } from '../common/exceptions/validation.exception.js';
 import { Language } from '../language/language.entity.js';
@@ -14,6 +14,7 @@ import { Upload } from '../uploads/upload.entity.js';
 import { deleteFile } from '../common/utils/storage.util.js';
 import { UpdateUserDTO } from './dto/update-user.dto.js';
 import { hashPassword } from '../common/utils/auth.util.js';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class UsersService {
@@ -24,14 +25,14 @@ export class UsersService {
 
     private readonly dataSource: DataSource,
 
-    // @InjectRepository(User)
-    // private readonly usersRepository: Repository<User>,
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
 
-    // @InjectRepository(Role)
-    // private readonly roleRepository: Repository<Role>,
+    @InjectRepository(Role)
+    private readonly roleRepository: Repository<Role>,
 
-    // @InjectRepository(Language)
-    // private readonly languageRepository: Repository<Language>,
+    @InjectRepository(Language)
+    private readonly languageRepository: Repository<Language>,
   ) {}
 
   async create(dto: CreateUserDto, profileImage: Express.Multer.File): Promise<UserResponseDTO> {
@@ -184,7 +185,7 @@ export class UsersService {
     }
   }
 
-  async delete(id: number) {
+  async delete(id: number): Promise<void> {
     const queryRunner = this.dataSource.createQueryRunner();
 
     await queryRunner.connect();
@@ -214,4 +215,19 @@ export class UsersService {
       await queryRunner.release();
     }
   }
+
+  async find(id: number): Promise<UserResponseDTO> {
+    // find user
+    const user = await this.usersRepository
+      .findOne({
+        relations: { role: true },
+        where: { id },
+      });
+
+    if (!user) throw new NotFoundException('User was not found: ' + id);
+
+    const languages: Language[] = await this.languageRepository.find();
+
+    return UserMapper.toResponseDTO(user, languages);
+  }  
 }
