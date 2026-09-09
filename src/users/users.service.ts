@@ -183,4 +183,35 @@ export class UsersService {
       await queryRunner.release();
     }
   }
+
+  async delete(id: number) {
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // find the user and lock the row for update
+      const user: User | null = await queryRunner.manager.findOne(User, {
+        where: {
+          id: id,
+        },
+        lock: {
+          mode: 'pessimistic_write'
+        }
+      });
+
+      if (!user) throw new NotFoundException('User not found: ' + id);
+
+      await queryRunner.manager.softDelete(User, id);
+
+      await queryRunner.commitTransaction(); // commit transaction
+      
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
 }

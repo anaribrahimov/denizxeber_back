@@ -1,4 +1,4 @@
-import { Body, ClassSerializerInterceptor, Controller, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, Patch, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Body, ClassSerializerInterceptor, Controller, Delete, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, Patch, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto.js";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { MAX_IMAGE_SIZE, multerStorageConfig, profileImageFileFilter } from "../common/multer/multer.config.js";
@@ -75,5 +75,11 @@ export class UsersController {
     return {
       message: 'User successfully updated',
     }
+  }
+
+  @Delete('/:id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(@Param('id') id: number) {
+    await this.usersService.delete(id);
   }
 }
