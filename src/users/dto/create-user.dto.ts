@@ -1,17 +1,16 @@
-import { 
+import {
   ArrayNotEmpty,
   IsArray,
   IsBoolean,
-  IsEmail, 
-  IsNotEmpty, 
-  IsNumber, 
-  IsOptional, 
-  isString, 
-  IsString, 
-  Matches, 
-  MaxLength, 
-  MinLength } from 'class-validator';
-import { Expose, Transform, Type } from 'class-transformer';
+  IsEmail,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength
+} from 'class-validator';
+import { Expose, Transform } from 'class-transformer';
 import { IsMatch } from '../../common/validators/is-match.validator.js';
 
 export class CreateUserDto {
@@ -51,50 +50,47 @@ export class CreateUserDto {
   passwordConfirmation: string;
 
   @Expose({ name: 'role_id' })
-  @IsString()
+  @Transform(({ value }) => {
+    if (value === null || value === '' || value?.trim() === '') return null;
+    if (value === undefined) return undefined;
+    // Strict regex check: Only allow strings that contain digits only
+    // This blocks values like "42.99", "42px", or "abc" immediately
+    if (!/^\d+$/.test(String(value))) {
+      return NaN; // Returning NaN will cause @IsInt to fail and throw an error
+    }
+    return parseInt(value, 10);
+  })
+  // @IsInt()
   @IsNotEmpty()
-  @Matches(/^\d+$/, { message: 'role_id must be a number' })
+  @IsIn([1, 2], { message: 'role_id must be either 1 or 2' })
   roleId: number;
 
   @Expose({ name: 'lang_ids' })
   @IsArray()
-  @IsNumber({}, { each: true }) // Ensures every transformed element is a number
-  // @Type(() => Number)           // Transforms array of strings to array of numbers
-  @ArrayNotEmpty()
-  // @Matches(/^\d+$/, { each: true, message: 'Each lang_id must be a number' })
+  @ArrayNotEmpty({ message: 'lang_ids should not be empty' })
+  @IsIn([1, 2, 3, 4, 5, 6], { message: 'Each lang_id can be either 1, 2, 3, 4, 5, 6', each: true })
   @Transform(({ value }) => {
-    // 1. If it's null or undefined, return it as-is so @IsOptional can catch it
-    if (value === null || value === undefined) {
-      return value; 
-    }
-
-    // 2. Ensure we are dealing with an array
-    let arrayValue = Array.isArray(value) 
-      ? value 
-      : typeof value === 'string' ? value.split(',') : [];
-
+    if (value === undefined) return undefined;
+    if (!Array.isArray(value)) return value;
     // 3. Map to numbers and strip duplicates, ignoring null/undefined elements inside the array
-    const cleanedNumbers = arrayValue
-      .filter((item) => item !== null && item !== undefined && item !== '')
-      .map(Number);
-
+    const cleanedNumbers = value.map(Number);
     return Array.from(new Set(cleanedNumbers));
   })
   langIds: number[];
 
   @Expose({ name: 'is_active' })
   @IsOptional()
-  @IsBoolean()
+  @IsBoolean({ message: 'is_active should be boolean' })
+  @IsIn([true, false])
   @Transform(({ value }) => {
-    // 1. Pass through null/undefined so @IsOptional can handle it
-    if (value === null || value === undefined || value === '') return undefined;
+    if (value == undefined) return undefined;
 
     // 2. Handle actual booleans or string variants
     if (value === true || value === 'true' || value === '1' || value === 1) return true;
     if (value === false || value === 'false' || value === '0' || value === 0) return false;
 
     // 3. Return the original invalid value so @IsBoolean catches it and throws an error
-    return value; 
+    return value;
   })
   isActive?: boolean;
 }

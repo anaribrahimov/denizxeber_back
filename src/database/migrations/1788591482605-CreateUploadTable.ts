@@ -12,6 +12,7 @@ export class CreateUploadTable1788591482605 implements MigrationInterface {
       \`mime_type\`                 varchar(100) NOT NULL,
       \`file_size_in_bytes\`        BIGINT UNSIGNED NOT NULL,
       \`created_at\`                datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      \`deleted_at\`                datetime NULL,
       UNIQUE INDEX \`IDX_uploads_file_path\` (\`file_path\`),
       PRIMARY KEY (\`id\`)
     ) ENGINE=InnoDB`);

@@ -1,9 +1,11 @@
-import { Body, ClassSerializerInterceptor, Controller, HttpStatus, ParseFilePipeBuilder, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Body, ClassSerializerInterceptor, Controller, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, Patch, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto.js";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { MAX_IMAGE_SIZE, multerStorageConfig, profileImageFileFilter } from "../common/multer/multer.config.js";
 import { UsersService } from "./users.service.js";
 import { UserResponseDTO } from "./dto/user-response.dto.js";
+import { UpdateUserDTO } from "./dto/update-user.dto.js";
+import { FileCleanupInterceptor } from "../common/interceptors/file-cleanup.interceptor.js";
 
 @Controller('/admin/users')
 export class UsersController {
@@ -16,7 +18,9 @@ export class UsersController {
       fileFilter: profileImageFileFilter,
       limits: { fileSize: MAX_IMAGE_SIZE },
     }),
+    FileCleanupInterceptor,
   )
+  @HttpCode(HttpStatus.CREATED)
   async create(
     @Body() createUserDto: CreateUserDto,
     @UploadedFile(
@@ -38,5 +42,38 @@ export class UsersController {
     return {
       data: user,
     };
+  }
+
+  @Patch('/:id')
+  @UseInterceptors(
+    FileInterceptor('profile_image', {
+      storage: multerStorageConfig('profile-images'),
+      fileFilter: profileImageFileFilter,
+      limits: { fileSize: MAX_IMAGE_SIZE },
+    }),
+    FileCleanupInterceptor,
+  )
+  async update(
+    @Param('id') id: number,
+    @Body() updateUserDto: UpdateUserDTO,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({ 
+          fileType: /(jpg|jpeg|png|webp)$/,
+          skipMagicNumbersValidation: true,
+          errorMessage: 'Only JPEG, PNG or WEBP images are allowed'
+        })
+        .addMaxSizeValidator({ maxSize: MAX_IMAGE_SIZE })
+        .build({
+          fileIsRequired: false,
+          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        }),
+    )
+    profileImage: Express.Multer.File,
+  ) {
+    await this.usersService.update(id, updateUserDto, profileImage);
+    return {
+      message: 'User successfully updated',
+    }
   }
 }

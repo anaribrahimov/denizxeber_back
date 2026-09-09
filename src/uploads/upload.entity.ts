@@ -1,6 +1,7 @@
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   Index,
   PrimaryGeneratedColumn,
@@ -73,4 +74,11 @@ export class Upload {
     default: () => 'CURRENT_TIMESTAMP',
   })
   createdAt: Date;
+
+  @DeleteDateColumn({
+    name: 'deleted_at',
+    type: 'datetime',
+    nullable: true,
+  })
+  deletedAt: Date | null;
 }
