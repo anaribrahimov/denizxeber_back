@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+// import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AppService {
   constructor(
-    private readonly configService: ConfigService
+    // private readonly configService: ConfigService
   ) {}
 
   getHello(): string {
-    console.log('App Name:', this.configService.get<string>('app.name'));
+    // console.log('App Name:', this.configService.get<string>('app.name'));
     return 'Hello World!';
   }
 }

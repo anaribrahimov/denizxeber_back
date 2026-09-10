@@ -97,7 +97,7 @@ export class UsersService {
       return UserMapper.toResponseDTO(savedUser, languages);
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      await deleteFile(profileImage.path);
+      if (profileImage) await deleteFile(profileImage.path);
       throw err;
     } finally {
       await queryRunner.release();

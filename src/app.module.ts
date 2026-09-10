@@ -4,8 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { validationSchema } from './config/validation.js';
 
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
+// import { AppController } from './app.controller.js';
+// import { AppService } from './app.service.js';
 import { appConfig } from './config/app.config.js';
 import { databaseConfig } from './config/database.config.js';
 import { LanguagesModule } from './language/languages.module.js';
@@ -57,7 +57,7 @@ import { storageConfig } from './config/storage.config.js';
     RolesModule,
     UsersModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  // controllers: [AppController],
+  // providers: [AppService],
 })
 export class AppModule {}
