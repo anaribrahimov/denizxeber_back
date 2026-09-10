@@ -13,6 +13,8 @@ import { UsersModule } from './users/users.module.js';
 import { RolesModule } from './roles/roles.module.js';
 import { UploadsModule } from './uploads/uploads.module.js';
 import { storageConfig } from './config/storage.config.js';
+import { AuthModule } from './auth/auth.module.js';
+import { securityConfig } from './config/security.config.js';
 
 @Module({
   imports: [
@@ -23,6 +25,7 @@ import { storageConfig } from './config/storage.config.js';
         appConfig,
         databaseConfig,
         storageConfig,
+        securityConfig,
       ],
 
       envFilePath: [
@@ -56,6 +59,7 @@ import { storageConfig } from './config/storage.config.js';
     UploadsModule,
     RolesModule,
     UsersModule,
+    AuthModule,
   ],
   // controllers: [AppController],
   // providers: [AppService],
