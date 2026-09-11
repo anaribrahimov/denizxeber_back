@@ -10,14 +10,20 @@ import { PaginateUserDto } from "./dto/paginate-user.dto.js";
 import { PaginatedResult } from "../common/interfaces/paginated-result.interface.js";
 import { Roles } from "../auth/decorators/roles.decorator.js";
 import { RolesGuard } from "../auth/guards/roles.guard.js";
+import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 @Controller('/admin/users')
 @UseGuards(RolesGuard)
 @Roles('Admin')
+@ApiTags('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Create a new user' })
+  @ApiConsumes('multipart/form-data')
+  @ApiResponse({ status: 201, description: 'User created successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
   @UseInterceptors(
     FileInterceptor('profile_image', {
       storage: multerStorageConfig('profile-images'),
@@ -51,6 +57,8 @@ export class UsersController {
   }
 
   @Patch('/:id')
+  @ApiResponse({ status: 200, description: 'User updated successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
   @UseInterceptors(
     FileInterceptor('profile_image', {
       storage: multerStorageConfig('profile-images'),
@@ -84,6 +92,8 @@ export class UsersController {
   }
 
   @Delete('/:id')
+  @ApiResponse({ status: 204, description: 'User deleted successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(@Param('id') id: number) {
     await this.usersService.delete(id);
