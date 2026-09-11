@@ -5,10 +5,14 @@ import * as bcrypt from 'bcrypt';
 import { Role } from '../roles/role.entity.js';
 import { User } from '../users/user.entity.js';
 import { RequestMeta } from './types/request-meta.type.js';
+import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
 
 @Injectable()
 export class AuthService {
   constructor(
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
     // private usersService: UsersService,
     private jwtService: JwtService,
     // private refreshTokenService: RefreshTokenService,
@@ -29,17 +33,19 @@ export class AuthService {
 
   // Called by LocalStrategy.validate()
   async validateUser(email: string, password: string) {
-    // const user = await this.usersService.findByEmail(email);
-    const user: User = {
-      id: 1,
-      email: 'johndoe@example.com',
-      role: { id: 1, name: 'Admin' } as Role,
-      password: 'somesecretpasswordhashed',
-    } as User;
+    const user = await this.userRepository.findOne({
+      where: { email },
+      relations: {
+        role: true,
+      }
+    });
+
+    // console.log('user', user);
+
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
-    // const match = await bcrypt.compare(password, user.password);
-    // if (!match) throw new UnauthorizedException('Invalid credentials');
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) throw new UnauthorizedException('Invalid credentials');
 
     const { password: _, ...safeUser } = user;
     return safeUser;

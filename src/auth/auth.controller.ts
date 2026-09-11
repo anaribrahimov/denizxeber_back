@@ -1,6 +1,5 @@
-// src/auth/auth.controller.ts
 import {
-  Controller, Post, Body, UseGuards, Req, Res, Get, UnauthorizedException,
+  Controller, Post, Body, UseGuards, Req, Res, Get
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
@@ -85,11 +84,11 @@ export class AuthController {
     return { data: user };
   }
 
-  // // Example of role-restricted route
-  // @UseGuards(RolesGuard)
-  // @Roles(Role.ADMIN)
-  // @Get('admin-only')
-  // adminOnly() {
-  //   return { message: 'Only admins see this' };
-  // }
+  // Example of role-restricted route
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
+  @Get('admin-only')
+  adminOnly() {
+    return { message: 'Only admins see this' };
+  }
 }
