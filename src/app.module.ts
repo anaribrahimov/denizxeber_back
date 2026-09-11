@@ -16,6 +16,10 @@ import { storageConfig } from './config/storage.config.js';
 import { AuthModule } from './auth/auth.module.js';
 import { securityConfig } from './config/security.config.js';
 import { ScheduleModule } from '@nestjs/schedule';
+import { APP_FILTER } from '@nestjs/core';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
+import { WinstonModule } from 'nest-winston';
+import { winstonConfig } from './logger/winston.config.js';
 
 @Module({
   imports: [
@@ -36,6 +40,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 
       validationSchema,
     }),
+    WinstonModule.forRoot(winstonConfig),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
 
@@ -65,6 +70,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     AuthModule,
   ],
   // controllers: [AppController],
-  // providers: [AppService],
+  providers: [
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
+  ],
 })
 export class AppModule {}
