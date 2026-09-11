@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, Patch, Post, Query, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto.js";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { MAX_IMAGE_SIZE, multerStorageConfig, profileImageFileFilter } from "../common/multer/multer.config.js";
@@ -8,8 +8,12 @@ import { UpdateUserDTO } from "./dto/update-user.dto.js";
 import { FileCleanupInterceptor } from "../common/interceptors/file-cleanup.interceptor.js";
 import { PaginateUserDto } from "./dto/paginate-user.dto.js";
 import { PaginatedResult } from "../common/interfaces/paginated-result.interface.js";
+import { Roles } from "../auth/decorators/roles.decorator.js";
+import { RolesGuard } from "../auth/guards/roles.guard.js";
 
 @Controller('/admin/users')
+@UseGuards(RolesGuard)
+@Roles('Admin')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
