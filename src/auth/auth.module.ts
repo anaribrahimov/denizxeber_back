@@ -22,9 +22,10 @@ import { User } from '../users/user.entity.js';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        // secret: config.get<string>('security.jwtAccessSecret'),
-        secret: 'secret',
-        signOptions: { expiresIn: '15m' },
+        secret: config.getOrThrow<string>('security.jwtAccessSecret'),
+        signOptions: { 
+          expiresIn: config.getOrThrow<string>('security.jwtAccessExpiresIn') as any,
+        },
       }),
     }),
   ],
