@@ -15,6 +15,7 @@ import { UploadsModule } from './uploads/uploads.module.js';
 import { storageConfig } from './config/storage.config.js';
 import { AuthModule } from './auth/auth.module.js';
 import { securityConfig } from './config/security.config.js';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -54,6 +55,8 @@ import { securityConfig } from './config/security.config.js';
         timezone: 'Z', // ⭐ Forces TypeORM to use UTC instead of the server's local time zone
       }),
     }),
+
+    ScheduleModule.forRoot(),
 
     LanguagesModule,
     UploadsModule,

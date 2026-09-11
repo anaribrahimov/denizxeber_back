@@ -3,7 +3,6 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
-import { UsersModule } from '../users/users.module.js';
 import { AuthController } from './auth.controller.js';
 import { AuthService } from './auth.service.js';
 import { LocalStrategy } from './strategies/local.strategy.js';
@@ -11,13 +10,14 @@ import { JwtStrategy } from './strategies/jwt.strategy.js';
 import { JwtAuthGuard } from './guards/jwt-auth.guard.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from '../users/user.entity.js';
+import { RefreshToken } from './refresh-token.entity.js';
+import { RefreshTokenService } from './refresh-token.service.js';
+import { RefreshTokenCleanupTask } from './refresh-token-cleanup.task.js';
 
 @Module({
   imports: [
-    // UsersModule,
     PassportModule,
-    // TypeOrmModule.forFeature([RefreshToken]),
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, RefreshToken]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -32,8 +32,8 @@ import { User } from '../users/user.entity.js';
   controllers: [AuthController],
   providers: [
     AuthService,
-    // RefreshTokenService,
-    // RefreshTokenCleanupTask,
+    RefreshTokenService,
+    RefreshTokenCleanupTask,
     LocalStrategy,
     JwtStrategy,
     // Applies JwtAuthGuard to EVERY route in the app by default.
