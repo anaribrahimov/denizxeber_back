@@ -32,12 +32,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       relations: {
         role: true,
       },
-      select: { id: true, email: true, role: true },
+      select: { id: true, email: true, role: true, langIds: true },
     })
 
     if (!user) throw new UnauthorizedException;
 
     // Attached to req.user on every route guarded by JwtAuthGuard
-    return { userId: payload.sub, email: payload.email, role: user.role };
+    return { 
+      userId: payload.sub, 
+      email: payload.email, 
+      role: user.role,
+      langIds: user.langIds ?? [],
+    };
   }
 }
