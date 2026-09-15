@@ -26,8 +26,8 @@ export class CreateLanguageTable1788432487008 implements MigrationInterface {
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     const env = process.env.NODE_ENV ? process.env.NODE_ENV.toLowerCase() : '';
-    if (['production', 'prod', 'stage'].includes(env)) {
-      throw new Error('Cannot revert migration in production or stage environment');
+    if (!['development', 'dev', 'local'].includes(env)) {
+      throw new Error('Migrations can be reverted in development, dev or local environment');
     }
     await queryRunner.query(`DROP INDEX \`IDX_languages_name\` ON \`languages\``);
     await queryRunner.query(`DROP TABLE IF EXISTS \`languages\``);

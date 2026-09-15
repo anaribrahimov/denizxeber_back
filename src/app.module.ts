@@ -20,6 +20,7 @@ import { APP_FILTER } from '@nestjs/core';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './logger/winston.config.js';
+import { CategoryModule } from './category/category.module.js';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { winstonConfig } from './logger/winston.config.js';
     RolesModule,
     UsersModule,
     AuthModule,
+    CategoryModule,
   ],
   // controllers: [AppController],
   providers: [

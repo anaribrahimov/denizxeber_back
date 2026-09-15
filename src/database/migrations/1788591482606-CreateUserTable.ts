@@ -25,6 +25,10 @@ export class CreateUserTable1788591482606 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    const env = process.env.NODE_ENV ? process.env.NODE_ENV.toLowerCase() : '';
+    if (!['development', 'dev', 'local'].includes(env)) {
+      throw new Error('Migrations can be reverted in development, dev or local environment');
+    }
     await queryRunner.query(`DROP TABLE \`users\``);
   }
 

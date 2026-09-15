@@ -20,6 +20,10 @@ export class CreateRoleTable1788521116110 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    const env = process.env.NODE_ENV ? process.env.NODE_ENV.toLowerCase() : '';
+    if (!['development', 'dev', 'local'].includes(env)) {
+      throw new Error('Migrations can be reverted in development, dev or local environment');
+    }
     await queryRunner.query(`DROP INDEX \`IDX_roles_name\` ON \`roles\``);
     await queryRunner.query(`DROP TABLE \`roles\``);
   }
