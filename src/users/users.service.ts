@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, Search } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, NotFoundException, Search } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { User } from './user.entity.js';
 import { DataSource, Repository } from 'typeorm';
@@ -17,6 +17,8 @@ import { hashPassword } from '../common/utils/auth.util.js';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface.js';
 import { PaginateUserDto } from './dto/paginate-user.dto.js';
+import { AuthUser } from '../auth/interfaces/auth-user.interface.js';
+import { roles } from '../roles/role.cache.js';
 
 @Injectable()
 export class UsersService {
@@ -104,7 +106,12 @@ export class UsersService {
     }
   }
 
-  async update(id: number, dto: UpdateUserDTO, profileImage?: Express.Multer.File): Promise<void> {
+  async update(
+    id: number, 
+    dto: UpdateUserDTO, 
+    authUser: AuthUser,
+    profileImage?: Express.Multer.File,
+  ): Promise<void> {
     const queryRunner = this.dataSource.createQueryRunner();
 
     await queryRunner.connect();
@@ -122,6 +129,11 @@ export class UsersService {
       });
 
       if (!user) throw new NotFoundException('User not found: ' + id);
+
+      if (authUser.userId !== id && user.roleId === roles.Admin.id) {
+        // updating admin user not allowed
+        throw new ForbiddenException('Can not update user with admin role');   
+      }
 
       const errors: Record<string, string[]> = {};
 
@@ -187,7 +199,7 @@ export class UsersService {
     }
   }
 
-  async delete(id: number): Promise<void> {
+  async delete(id: number, authUser: AuthUser): Promise<void> {
     const queryRunner = this.dataSource.createQueryRunner();
 
     await queryRunner.connect();
@@ -205,6 +217,15 @@ export class UsersService {
       });
 
       if (!user) throw new NotFoundException('User not found: ' + id);
+
+      if (authUser.userId === id) {
+        throw new ForbiddenException('You can not delete yourself');
+      }
+
+      if (authUser.userId !== id && user.roleId === roles.Admin.id) {
+        // deleting admin user not allowed
+        throw new ForbiddenException('Can not delete user with admin role');   
+      }
 
       await queryRunner.manager.softDelete(User, id);
 

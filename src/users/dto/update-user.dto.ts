@@ -10,6 +10,15 @@ export class UpdateUserDTO {
   @IsString({ message: 'first_name must be string' })
   @IsNotEmpty({ message: 'first_name must not be empty' })
   @MaxLength(100, { message: 'first_name must be shorter than or equal to 100 characters' })
+  @Matches(
+    /^[a-zA-Z0-9\s]+$/,
+    {
+      message: 'Special characters not allowed',
+      validateIf(object, value) {
+        return typeof value === 'string' ? !!value.length : false;
+      },
+    }
+  )
   firstName?: string;
 
   @Expose({ name: 'last_name' })
@@ -18,6 +27,15 @@ export class UpdateUserDTO {
   @IsString({ message: 'last_name must be string' })
   @IsNotEmpty({ message: 'last_name must not be empty' })
   @MaxLength(100, { message: 'last_name must be shorter than or equal to 100 characters' })
+  @Matches(
+    /^[a-zA-Z0-9\s]+$/,
+    {
+      message: 'Special characters not allowed',
+      validateIf(object, value) {
+        return typeof value === 'string' ? !!value.length : false;
+      },
+    }
+  )
   lastName?: string;
 
   @ValidateIf((o, value) => value !== undefined)
@@ -46,8 +64,7 @@ export class UpdateUserDTO {
   @Expose({ name: 'role_id' })
   @ValidateIf((o, value) => value !== undefined)
   @Transform(({ value }) => {
-    if (value === null || value === '' || value?.trim() === '') return null;
-    if (value === undefined) return undefined;
+    if (value === undefined || value === null || typeof value !== 'string') return value;
     // Strict regex check: Only allow strings that contain digits only
     // This blocks values like "42.99", "42px", or "abc" immediately
     if (!/^\d+$/.test(String(value))) {
@@ -55,7 +72,7 @@ export class UpdateUserDTO {
     }
     return parseInt(value, 10);
   })
-  // @IsInt()
+  @IsInt()
   @IsIn([1, 2], { message: 'role_id must be either 1 or 2'})
   roleId?: number;
 

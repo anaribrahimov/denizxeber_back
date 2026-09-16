@@ -4,6 +4,7 @@ import {
   IsBoolean,
   IsEmail,
   IsIn,
+  IsInt,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -21,6 +22,15 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
+  @Matches(
+    /^[a-zA-Z0-9\s]+$/,
+    {
+      message: 'Special characters not allowed',
+      validateIf(object, value) {
+        return typeof value === 'string' ? !!value.length : false;
+      },
+    }
+  )
   firstName: string;
 
   @Expose({ name: 'last_name' })
@@ -28,6 +38,15 @@ export class CreateUserDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
+  @Matches(
+    /^[a-zA-Z0-9\s]+$/,
+    {
+      message: 'Special characters not allowed',
+      validateIf(object, value) {
+        return typeof value === 'string' ? !!value.length : false;
+      },
+    }
+  )
   lastName: string;
 
   @IsEmail()
@@ -63,8 +82,7 @@ export class CreateUserDto {
 
   @Expose({ name: 'role_id' })
   @Transform(({ value }) => {
-    if (value === null || value === '' || value?.trim() === '') return null;
-    if (value === undefined) return undefined;
+    if (value === undefined || value === null || typeof value !== 'string') return value;
     // Strict regex check: Only allow strings that contain digits only
     // This blocks values like "42.99", "42px", or "abc" immediately
     if (!/^\d+$/.test(String(value))) {
@@ -72,7 +90,7 @@ export class CreateUserDto {
     }
     return parseInt(value, 10);
   })
-  // @IsInt()
+  @IsInt()
   @IsNotEmpty()
   @IsIn([1, 2], { message: 'role_id must be either 1 or 2' })
   roleId: number;

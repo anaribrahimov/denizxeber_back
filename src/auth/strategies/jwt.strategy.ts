@@ -39,7 +39,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     // Attached to req.user on every route guarded by JwtAuthGuard
     return { 
-      userId: payload.sub, 
+      userId: +payload.sub, 
       email: payload.email, 
       role: user.role,
       langIds: user.langIds ?? [],

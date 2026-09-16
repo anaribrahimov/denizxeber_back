@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseIntPipe, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto.js";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { MAX_IMAGE_SIZE, multerStorageConfig, profileImageFileFilter } from "../common/multer/multer.config.js";
@@ -11,6 +11,8 @@ import { PaginatedResult } from "../common/interfaces/paginated-result.interface
 import { Roles } from "../auth/decorators/roles.decorator.js";
 import { RolesGuard } from "../auth/guards/roles.guard.js";
 import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { CurrentUser } from "../auth/decorators/current-user.decorator.js";
+import type { AuthUser } from "../auth/interfaces/auth-user.interface.js";
 
 @Controller('/admin/users')
 @UseGuards(RolesGuard)
@@ -68,7 +70,7 @@ export class UsersController {
     FileCleanupInterceptor,
   )
   async update(
-    @Param('id') id: number,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDTO,
     @UploadedFile(
       new ParseFilePipeBuilder()
@@ -84,8 +86,9 @@ export class UsersController {
         }),
     )
     profileImage: Express.Multer.File,
+    @CurrentUser() currentUser: AuthUser,
   ) {
-    await this.usersService.update(id, updateUserDto, profileImage);
+    await this.usersService.update(id, updateUserDto, currentUser, profileImage);
     return {
       message: 'User successfully updated',
     }
@@ -95,12 +98,14 @@ export class UsersController {
   @ApiResponse({ status: 204, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@Param('id') id: number) {
-    await this.usersService.delete(id);
+  async delete(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() currentUser: AuthUser): Promise<void> {
+    await this.usersService.delete(id, currentUser);
   }
 
   @Get('/:id')
-  async find(@Param('id') id: number) {
+  async find(@Param('id', ParseIntPipe) id: number) {
     const user: UserResponseDTO = await this.usersService.find(id);
     return { data: user };
   }
