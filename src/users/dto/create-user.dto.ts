@@ -7,21 +7,24 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
   MinLength
 } from 'class-validator';
 import { Expose, Transform } from 'class-transformer';
-import { IsMatch } from '../../common/validators/is-match.validator.js';
+// import { IsMatch } from '../../common/validators/is-match.validator.js';
 
 export class CreateUserDto {
 
   @Expose({ name: 'first_name' })
+  @Transform(({ value }) => typeof value === 'string' ? value?.trim() : value)
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
   firstName: string;
 
   @Expose({ name: 'last_name' })
+  @Transform(({ value }) => typeof value === 'string' ? value?.trim() : value)
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
@@ -39,15 +42,24 @@ export class CreateUserDto {
   @IsNotEmpty()
   @MinLength(8)
   @MaxLength(20)
+  @Matches(
+    // /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{8,}$/, // allow spaces
+    {
+      message: 'Password must have at least one uppercase letter,'
+        + ' one lowercase letter, one digit, one special character,'
+        + ' and a minimum length of 8 characters'
+    }
+  )
   password: string;
 
-  @Expose({ name: 'password_confirmation' })
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(8)
-  @MaxLength(20)
-  @IsMatch('password', { message: 'Password confirmation does not match password' })
-  passwordConfirmation: string;
+  // @Expose({ name: 'password_confirmation' })
+  // @IsString()
+  // @IsNotEmpty()
+  // @MinLength(8)
+  // @MaxLength(20)
+  // @IsMatch('password', { message: 'Password confirmation does not match password' })
+  // passwordConfirmation: string;
 
   @Expose({ name: 'role_id' })
   @Transform(({ value }) => {

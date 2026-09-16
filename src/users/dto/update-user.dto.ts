@@ -1,11 +1,12 @@
 import { Expose, Transform, Type } from "class-transformer";
 import { ArrayNotEmpty, IsArray, IsBoolean, IsEmpty, IsIn, IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Length, Matches, MaxLength, MinLength, ValidateIf } from "class-validator";
-import { IsMatch } from "../../common/validators/is-match.validator.js";
+// import { IsMatch } from "../../common/validators/is-match.validator.js";
 
 export class UpdateUserDTO {
 
   @Expose({ name: 'first_name' })
   @ValidateIf((o, value) => value !== undefined)
+  @Transform(({ value }) => typeof value === 'string' ? value?.trim() : value)
   @IsString({ message: 'first_name must be string' })
   @IsNotEmpty({ message: 'first_name must not be empty' })
   @MaxLength(100, { message: 'first_name must be shorter than or equal to 100 characters' })
@@ -13,6 +14,7 @@ export class UpdateUserDTO {
 
   @Expose({ name: 'last_name' })
   @ValidateIf((o, value) => value !== undefined)
+  @Transform(({ value }) => typeof value === 'string' ? value?.trim() : value)
   @IsString({ message: 'last_name must be string' })
   @IsNotEmpty({ message: 'last_name must not be empty' })
   @MaxLength(100, { message: 'last_name must be shorter than or equal to 100 characters' })
@@ -22,15 +24,24 @@ export class UpdateUserDTO {
   @IsString()
   @MinLength(8)
   @MaxLength(20)
+  @Matches(
+    // /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/,
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{8,}$/, // allow spaces
+    {
+      message: 'Password must have at least one uppercase letter,'
+        + ' one lowercase letter, one digit, one special character,'
+        + ' and a minimum length of 8 characters'
+    }
+  )
   password?: string;
 
-  @Expose({ name: 'password_confirmation' })
-  @ValidateIf((o) => o.password !== undefined)
-  @IsString()
-  @MinLength(8)
-  @MaxLength(20)
-  @IsMatch('password', { message: 'Password confirmation does not match password' })
-  passwordConfirmation?: string;
+  // @Expose({ name: 'password_confirmation' })
+  // @ValidateIf((o) => o.password !== undefined)
+  // @IsString()
+  // @MinLength(8)
+  // @MaxLength(20)
+  // @IsMatch('password', { message: 'Password confirmation does not match password' })
+  // passwordConfirmation?: string;
 
   @Expose({ name: 'role_id' })
   @ValidateIf((o, value) => value !== undefined)
