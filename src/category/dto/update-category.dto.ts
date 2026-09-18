@@ -1,3 +1,4 @@
+import { ApiProperty } from "@nestjs/swagger";
 import { Expose, Transform } from "class-transformer";
 import { IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength } from "class-validator";
 
@@ -16,6 +17,7 @@ export class UpdateCategoryDto {
   name: string;
 
   @Expose({ name: 'is_active' })
+  @ApiProperty({ name: 'is_active', example: true })
   @IsOptional()
   @Transform(({ value }) => {
     // 1. Pass through null/undefined so @IsOptional can handle it
@@ -30,6 +32,11 @@ export class UpdateCategoryDto {
   })
   isActive: boolean;
 
+  @ApiProperty({ 
+    name: 'change_posts_category_id', 
+    example: 1,
+    description: 'Category id to which this category posts will be changed',
+  })
   @Expose({ name: 'change_posts_category_id' })
   @IsOptional()
   @IsNumber()

@@ -1,6 +1,7 @@
 import { Expose, Transform } from "class-transformer";
 import { IsIn, IsNotEmpty, IsNumber, IsOptional, IsString, MaxLength } from "class-validator";
 import { languages } from "../../language/language.cache.js";
+import { ApiProperty } from "@nestjs/swagger";
 
 export class CreateCategoryDto {
   @IsString()
@@ -10,6 +11,11 @@ export class CreateCategoryDto {
   name: string;
 
   @Expose({ name: 'is_active' })
+  @ApiProperty({
+    name: 'is_active',
+    // title: 'is_active',
+    example: true
+  })
   @IsOptional()
   @Transform(({ value }) => {
     // 1. Pass through null/undefined so @IsOptional can handle it
