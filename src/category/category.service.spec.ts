@@ -255,6 +255,9 @@ describe('CategoryService', () => {
     it('allows renaming when the "existing" match with the same name is the category itself', async () => {
       const dto = { name: 'Tech Updated' } as any;
       const category = { id: 1, langId: 1, name: 'Tech' } as Category;
+      const mockDate = new Date(2026, 0, 1, 12, 0, 0) // Jan 1, 2026, 12:00:00
+
+      vi.setSystemTime(mockDate);
 
       queryRunner.manager.findOne.mockResolvedValueOnce(category);
       // existing found but it's the same record (id matches) -> allowed
@@ -266,7 +269,7 @@ describe('CategoryService', () => {
       const result = await service.update(1, dto, 1);
 
       expect(category.name).toBe('Tech Updated');
-      expect(category.slug).toBe('tech-updated');
+      expect(category.slug).toBe(`tech-updated-${mockDate.getTime()}`);
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
       expect(result).toEqual({ id: 1 });
     });
@@ -274,6 +277,9 @@ describe('CategoryService', () => {
     it('updates name and slug when name changes and no conflict exists', async () => {
       const dto = { name: 'New Name' } as any;
       const category = { id: 1, langId: 1, name: 'Old Name' } as Category;
+      const mockDate = new Date(2026, 0, 1, 12, 0, 0) // Jan 1, 2026, 12:00:00
+
+      vi.setSystemTime(mockDate);
 
       queryRunner.manager.findOne.mockResolvedValueOnce(category);
       categoryRepository.findOne.mockResolvedValue(null);
@@ -288,7 +294,7 @@ describe('CategoryService', () => {
 
       expect(slug).toHaveBeenCalledWith('New Name');
       expect(category.name).toBe('New Name');
-      expect(category.slug).toBe('new-name');
+      expect(category.slug).toBe(`new-name-${mockDate.getTime()}`);
       expect(queryRunner.manager.save).toHaveBeenCalledWith(category);
       expect(queryRunner.commitTransaction).toHaveBeenCalled();
       expect(queryRunner.release).toHaveBeenCalled();

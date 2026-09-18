@@ -151,7 +151,7 @@ export class CategoryService {
         category.name = dto.name;
 
         // update category slug
-        category.slug = slug(dto.name);
+        category.slug = slug(dto.name) + `-${Date.now()}`;
       }
 
       if (typeof dto.isActive === 'boolean') {

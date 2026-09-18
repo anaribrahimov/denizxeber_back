@@ -9,7 +9,7 @@ export class CategoryMapper {
     const category = new Category();
     category.langId = langId;
     category.name = dto.name;
-    category.slug = slug(dto.name);
+    category.slug = slug(dto.name) + `-${Date.now()}`;
     category.userId = userId;
     category.isActive = typeof dto.isActive === 'boolean' ? dto.isActive : true;
     return category;

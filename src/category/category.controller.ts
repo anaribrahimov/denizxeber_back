@@ -20,7 +20,7 @@ import { LanguageGuard } from "../common/guards/language.guard.js";
 @Controller('/admin/:lang/categories')
 @UseGuards(RolesGuard)
 @UseGuards(LanguageGuard)
-@Roles('Admin')
+@Roles('Admin', 'User')
 @ApiTags('categories')
 @ApiResponse({
   status: 401,
