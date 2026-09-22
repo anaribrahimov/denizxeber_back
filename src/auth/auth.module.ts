@@ -13,11 +13,13 @@ import { User } from '../users/user.entity.js';
 import { RefreshToken } from './refresh-token.entity.js';
 import { RefreshTokenService } from './refresh-token.service.js';
 import { RefreshTokenCleanupTask } from './refresh-token-cleanup.task.js';
+import { Category } from '../category/category.entity.js';
+import { AuthMapper } from './auth.mapper.js';
 
 @Module({
   imports: [
     PassportModule,
-    TypeOrmModule.forFeature([User, RefreshToken]),
+    TypeOrmModule.forFeature([User, RefreshToken, Category]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -36,6 +38,7 @@ import { RefreshTokenCleanupTask } from './refresh-token-cleanup.task.js';
     RefreshTokenCleanupTask,
     LocalStrategy,
     JwtStrategy,
+    AuthMapper,
     // Applies JwtAuthGuard to EVERY route in the app by default.
     // Use @Public() on a route to exempt it (register, login, refresh, etc.)
     { provide: APP_GUARD, useClass: JwtAuthGuard },

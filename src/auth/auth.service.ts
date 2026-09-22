@@ -5,18 +5,24 @@ import * as bcrypt from 'bcrypt';
 import { Role } from '../roles/role.entity.js';
 import { User } from '../users/user.entity.js';
 import { RequestMeta } from './types/request-meta.type.js';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { RefreshTokenService } from './refresh-token.service.js';
+import { Category } from '../category/category.entity.js';
+import { AuthMapper } from './auth.mapper.js';
+import { ValidatedUserDto } from './dto/validated-user.dto.js';
 
 @Injectable()
 export class AuthService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(Category)
+    private readonly categoryRepository: Repository<Category>,
     // private usersService: UsersService,
     private jwtService: JwtService,
     private refreshTokenService: RefreshTokenService,
+    private authMapper: AuthMapper,
   ) {}
 
   // async register(dto: RegisterDto, meta: RequestMeta) {
@@ -33,7 +39,7 @@ export class AuthService {
   // }
 
   // Called by LocalStrategy.validate()
-  async validateUser(email: string, password: string) {
+  async validateUser(email: string, password: string): Promise<ValidatedUserDto> {
     const user = await this.userRepository.findOne({
       where: { email },
       relations: {
@@ -48,12 +54,39 @@ export class AuthService {
     const match = await bcrypt.compare(password, user.password);
     if (!match) throw new UnauthorizedException('Invalid credentials');
 
-    const { password: _, ...safeUser } = user;
-    return safeUser;
+    // const { password: _, ...safeUser } = user;
+
+    // console.log('safeuser', safeUser);
+
+    return this.authMapper.toValidatedUserDto(user);
   }
 
-  async login(user: { id: string; email: string; role: Role }, meta: RequestMeta) {
-    return this.issueTokens(user.id, user.email, user.role, meta);
+  async login(user: ValidatedUserDto, meta: RequestMeta) {
+    let categories: Category[] = [];
+
+    if (user?.langIds && user.langIds.length) {
+      // fetch categories
+      categories = await this.categoryRepository.find({
+        where: {
+          langId: In(user.langIds),
+          isActive: true
+        }
+      });
+    }
+
+    const {
+      accessToken,
+      refreshToken,
+      refreshExpiresAt,
+    } = await this.issueTokens(user.id.toString(), user.email, user.role, meta);
+
+    return {
+      accessToken,
+      refreshToken,
+      refreshExpiresAt,
+      user,
+      categories,
+    }
   }
 
   async refresh(rawRefreshToken: string, meta: RequestMeta) {
@@ -82,7 +115,11 @@ export class AuthService {
     await this.refreshTokenService.revokeAllForUser(userId);
   }
 
-  private async issueTokens(sub: string, email: string, role: Role | null, meta: RequestMeta) {
+  private async issueTokens(
+    sub: string, 
+    email: string, 
+    role: Role | null, 
+    meta: RequestMeta): Promise<{ accessToken: string, refreshToken: string, refreshExpiresAt: Date }> {
     const accessToken = this.signAccessToken(sub, email, role);
     const { raw, expiresAt } = await this.refreshTokenService.issue(sub, meta);
     return { accessToken, refreshToken: raw, refreshExpiresAt: expiresAt };

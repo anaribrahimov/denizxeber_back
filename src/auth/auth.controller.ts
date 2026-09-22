@@ -12,6 +12,8 @@ import { CurrentUser } from './decorators/current-user.decorator.js';
 import { RolesGuard } from './guards/roles.guard.js';
 import { Roles } from './decorators/roles.decorator.js';
 import { clearRefreshCookie, REFRESH_COOKIE_NAME, setRefreshCookie } from './utils/cookie.util.js';
+import { LoginResponseDto } from './dto/login-response.dto.js';
+import { AuthMapper } from './auth.mapper.js';
 
 function meta(req: Request) {
   return { userAgent: req.headers['user-agent'], ipAddress: req.ip };
@@ -22,6 +24,7 @@ export class AuthController {
   constructor(
     private authService: AuthService,
     private config: ConfigService,
+    private authMapper: AuthMapper,
   ) {}
 
   // @Public()
@@ -45,11 +48,17 @@ export class AuthController {
     @Body() _dto: LoginDto, // kept for Swagger/validation; LocalStrategy reads req.body itself
     @Req() req: Request,
     @Res({ passthrough: true }) res: Response,
-  ) {
-    const { accessToken, refreshToken, refreshExpiresAt } =
-      await this.authService.login(req.user as any, meta(req));
+  ): Promise<LoginResponseDto> {
+    // console.log('request user', req.user);
+    const {
+      accessToken, 
+      refreshToken, 
+      refreshExpiresAt,
+      user,
+      categories,
+    } = await this.authService.login(req.user as any, meta(req));
     setRefreshCookie(res, refreshToken, refreshExpiresAt, this.config);
-    return { accessToken };
+    return this.authMapper.toLoginResponseDto(accessToken, user, categories);
   }
 
   @Public()
