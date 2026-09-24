@@ -1,9 +1,5 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { mkdir } from "fs/promises";
-import { join } from "path";
-import sharp from "sharp";
-import { moveFile } from "../common/utils/storage.util.js";
 import { Upload, UploadType } from "./upload.entity.js";
 import { MediaService } from "../common/services/media.service.js";
 import { StorageService } from "../common/services/storage.service.js";
