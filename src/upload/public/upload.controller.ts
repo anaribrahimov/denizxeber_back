@@ -23,7 +23,7 @@ export class PublicUploadController {
       throw new NotFoundException();
     }
 
-    console.log('range header', rangeHeader);
+    // console.log('range header', rangeHeader);
 
     let result: ReadFileResult;
     try {
@@ -31,7 +31,8 @@ export class PublicUploadController {
     } catch (err) {
       if (err instanceof RangeNotSatisfiableException) {
         res.writeHead(416, { 'Content-Range': `bytes */${err.sizeByte}` });
-        return res.end();
+        res.end();
+        return;
       }
       throw err;
     }
