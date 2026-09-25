@@ -1,6 +1,6 @@
-import { BadRequestException, Controller, HttpCode, HttpStatus, ParseFilePipeBuilder, Post, UploadedFile, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Controller, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseIntPipe, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { UploadService } from "./upload.service.js";
-import { ApiConsumes, ApiOperation, ApiResponse } from "@nestjs/swagger";
+import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { commonUploadFilter, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, multerStorageConfig } from "../common/multer/multer.config.js";
 import { FileCleanupInterceptor } from "../common/interceptors/file-cleanup.interceptor.js";
@@ -8,9 +8,28 @@ import { Public } from "../auth/decorators/public.decorator.js";
 import { UploadResponseDto } from "./dto/upload-response.dto.js";
 import { UploadResultDto } from "./dto/upload-result.dto.js";
 import { CommonErrorDto } from "../common/dto/common-error.dto.js";
+import { RolesGuard } from "../auth/guards/roles.guard.js";
+import { LanguageGuard } from "../common/guards/language.guard.js";
+import { Roles } from "../auth/decorators/roles.decorator.js";
+import { UnauthenticatedResponseDto } from "../common/dto/unauthenticated-response.dto.js";
+import { UnauthorizedResponseDto } from "../common/dto/unauthorized-response.dto.js";
 
 
-@Controller('/admin/uploads')
+@Controller('/admin/:lang/uploads')
+@UseGuards(RolesGuard)
+@UseGuards(LanguageGuard)
+@Roles('Admin', 'User')
+@ApiTags('uploads')
+@ApiResponse({
+  status: 401,
+  description: 'Unauthenticated',
+  type: UnauthenticatedResponseDto,
+})
+@ApiResponse({
+  status: 403,
+  description: 'Unauthorized',
+  type: UnauthorizedResponseDto,
+})
 export class UploadController {
 
   constructor(
@@ -18,7 +37,6 @@ export class UploadController {
   ) { }
 
   @Post()
-  @Public()
   @ApiOperation({ summary: 'Upload a new file' })
   @ApiConsumes('multipart/form-data')
   @ApiResponse({ 
@@ -77,4 +95,23 @@ export class UploadController {
 
     return { data: upload };
   }
+
+  @Get('/:id')
+  @ApiOperation({ summary: 'Find upload' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'Returns upload data',
+    type: UploadResultDto,
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Upload not found',
+    type: CommonErrorDto,
+  })
+  @HttpCode(HttpStatus.OK)
+  async find(@Param('id', ParseIntPipe) id: number): Promise<UploadResultDto> {
+    const upload = await this.uploadService.findById(id);
+    return { data: upload };
+  }
+
 }

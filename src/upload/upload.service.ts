@@ -86,6 +86,23 @@ export class UploadService {
     }
   }
 
+  public async findById(id: number) {
+    const upload = await this.uploadRepository.findOne({
+      where: {
+        id
+      },
+      relations: {
+        versions: true
+      }
+    });
+
+    if (!upload) {
+      throw new NotFoundException("Upload not found");
+    }
+
+    return this.uploadMapper.toUploadResponseDto(upload);
+  }
+
   // public async readFile(filePath: string) {
   //   // find upload
   //   const upload = await this.uploadRepository
