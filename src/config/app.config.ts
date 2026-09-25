@@ -5,4 +5,5 @@ export const appConfig = registerAs('app', () => ({
   env: process.env.NODE_ENV,
   port: parseInt(process.env.APP_PORT ?? '3000', 10),
   debug: process.env.APP_DEBUG === 'true',
+  url: process.env.APP_URL,
 }));

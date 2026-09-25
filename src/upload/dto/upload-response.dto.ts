@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { UploadType } from "../upload.entity.js";
+import { UploadVersionResponseDto } from "./upload-version-response.dto.js";
 
 export class UploadResponseDto {
 
@@ -16,13 +17,13 @@ export class UploadResponseDto {
   fileName: string;
 
   @ApiProperty()
-  filePath: string;
+  fileKey: string;
 
   @ApiProperty()
   mimeType: string;
 
   @ApiProperty()
-  fileSizeInBytes: string;
+  fileSizeByte: number;
 
   @ApiProperty()
   fileWidth: number|null;
@@ -31,20 +32,14 @@ export class UploadResponseDto {
   fileHeight: number|null;
 
   @ApiProperty()
-  thumbPath: string|null;
-
-  @ApiProperty()
-  thumbWidth: number|null;
-
-  @ApiProperty()
-  thumbHeight: number|null;
-
-  @ApiProperty()
-  thumbSizeInBytes: number|null;
-
-  @ApiProperty()
-  durationInSec: number|null;
+  durationSec: number|null;
 
   @ApiProperty()
   createdAt: Date;
+
+  @ApiProperty()
+  preview: string;
+
+  @ApiProperty()
+  versions: UploadVersionResponseDto[];
 }

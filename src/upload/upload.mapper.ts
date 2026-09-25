@@ -1,39 +1,63 @@
 import { Injectable } from "@nestjs/common";
 import { Upload, UploadType } from "./upload.entity.js";
 import { UploadResponseDto } from "./dto/upload-response.dto.js";
+import { UploadVersion, UploadVersionType } from "./upload-version.entity.js";
+import { UploadVersionResponseDto } from "./dto/upload-version-response.dto.js";
+import { StorageService } from "../common/services/storage.service.js";
 
 @Injectable()
 export class UploadMapper {
+
+  constructor(
+    private readonly storageService: StorageService,
+  ) {}
+
+  public toUploadVersionEntity(
+    upload: Upload,
+    version: UploadVersionType,
+    fileName: string,
+    fileMimeType: string,
+    fileKey: string,
+    fileWidth: number|null,
+    fileHeight: number|null,
+    fileSizeByte: number|null,
+  ) {
+    const uploadVersion = new UploadVersion();
+    uploadVersion.upload = upload;
+    uploadVersion.version = version;
+    uploadVersion.fileName = fileName;
+    uploadVersion.fileMimeType = fileMimeType;
+    uploadVersion.fileKey = fileKey;
+    uploadVersion.fileWidth = fileWidth;
+    uploadVersion.fileHeight = fileHeight;
+    uploadVersion.fileSizeByte = fileSizeByte;
+    return uploadVersion;
+  }
 
   public toEntity(
     type: UploadType,
     fileName: string,
     fileOriginalName: string,
-    filePath: string,
-    mimeType: string,
-    fileSizeInBytes: number|null,
+    fileKey: string,
+    fileMimeType: string,
+    fileSizeByte: number|null,
     fileWidth: number|null,
     fileHeight: number|null,
-    thumbPath: string|null,
-    thumbWidth: number|null,
-    thumbHeight: number|null,
-    thumbSizeInBytes: number|null,
-    durationInSec: number|null,
+    durationSec: number|null,
+    versions: UploadVersion[]|null,
   ): Upload {
     const upload = new Upload();
     upload.type = type;
     upload.fileName = fileName;
     upload.fileOriginalName = fileOriginalName;
-    upload.filePath = filePath;
-    upload.mimeType = mimeType;
-    upload.fileSizeInBytes = fileSizeInBytes;
+    upload.filePath = fileKey;
+    upload.fileKey = fileKey;
+    upload.fileMimeType = fileMimeType;
+    upload.fileSizeByte = fileSizeByte;
     upload.fileWidth = fileWidth;
     upload.fileHeight = fileHeight;
-    upload.thumbPath = thumbPath;
-    upload.thumbWidth = thumbWidth;
-    upload.thumbHeight = thumbHeight;
-    upload.thumbSizeInBytes = thumbSizeInBytes;
-    upload.durationInSec = durationInSec;
+    upload.durationSec = durationSec;
+    upload.versions = versions;
     return upload;
   }
 
@@ -42,16 +66,25 @@ export class UploadMapper {
     dto.id = upload.id;
     dto.fileOriginalName = upload.fileOriginalName;
     dto.fileName = upload.fileName;
-    dto.filePath = upload.filePath;
+    dto.fileKey = upload.fileKey;
     dto.fileWidth = upload.fileWidth;
     dto.fileHeight = upload.fileHeight;
-    dto.mimeType = upload.mimeType;
-    dto.thumbPath = upload.thumbPath;
-    dto.thumbWidth = upload.thumbWidth;
-    dto.thumbHeight = upload.thumbHeight;
-    dto.thumbSizeInBytes = upload.thumbSizeInBytes;
-    dto.durationInSec = upload.durationInSec;
+    dto.durationSec = upload.durationSec;
     dto.createdAt = upload.createdAt;
+    dto.preview = this.storageService.createPreviewUrl(upload.fileKey);
+    dto.versions = 
+      upload.versions?.map(
+        (uploadVersion: UploadVersion) => ({
+          id: uploadVersion.id,
+          version: uploadVersion.version,
+          fileName: uploadVersion.fileName,
+          fileKey: uploadVersion.fileKey,
+          fileWidth: uploadVersion.fileWidth,
+          fileHeight: uploadVersion.fileHeight,
+          fileSizeByte: uploadVersion.fileSizeByte,
+          preview: this.storageService.createPreviewUrl(uploadVersion.fileKey),
+        })
+      ) as UploadVersionResponseDto[] ?? [];
     return dto;
   }
 }

@@ -34,6 +34,8 @@ export class MediaService {
 
     let permanentPath: string | null = null;
 
+    let thumbnailMimeType = 'image/webp';
+    let thumbnailFilename: string | null = null;
     let thumbnailSizeInBytes: number|null = null;
     let thumbnailWidth: number|null = null;
     let thumbnailHeight: number|null = null;
@@ -99,7 +101,7 @@ export class MediaService {
 
         await this.storageService.ensureDirectory(thumbnailDirectory);
 
-        const thumbnailFilename = `${uuidv4()}.webp`;
+        thumbnailFilename = `${uuidv4()}.webp`;
 
         thumbnailPath = `${thumbnailDirectory}/${thumbnailFilename}`;
 
@@ -132,7 +134,7 @@ export class MediaService {
 
         path: permanentPath,
 
-        relativePath:
+        fileKey:
           this.storageService
             .getRelativePath(
               permanentPath!,
@@ -145,7 +147,11 @@ export class MediaService {
 
         thumbnailPath,
 
-        thumbnailRelativePath:
+        thumbnailFilename, 
+
+        thumbnailMimeType,
+
+        thumbnailKey:
           thumbnailPath
             ? this.storageService
                 .getRelativePath(

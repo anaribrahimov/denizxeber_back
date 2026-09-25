@@ -1,6 +1,7 @@
 import {
   Injectable,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import {
   mkdir,
@@ -15,15 +16,17 @@ import {
   join,
   relative,
   resolve,
+  sep,
 } from 'node:path';
 import { ConfigService } from '@nestjs/config';
-import { existsSync } from 'node:fs';
+import { createReadStream, existsSync } from 'node:fs';
 
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
 
   private readonly uploadsPath: string;
+  private readonly appUrl: string; 
 
   constructor(
     private readonly configService: ConfigService,
@@ -33,6 +36,7 @@ export class StorageService {
         'storage.localUploadsPath',
       ),
     );
+    this.appUrl = this.configService.getOrThrow<string>('app.url');
   }
 
   get rootPath(): string {
@@ -144,5 +148,33 @@ export class StorageService {
       this.uploadsPath,
       relativePath,
     );
+  }
+
+  async readFileStream(relativePath: string) {
+    const filePath = resolve(join(this.uploadsPath, relativePath));
+
+    // Prevent ../../ path traversal
+    if (!filePath.startsWith(this.uploadsPath + sep)) {
+      throw new NotFoundException('File not found');
+    }
+
+    let fileStat;
+
+    try {
+      fileStat = await stat(filePath);
+    } catch {
+      throw new NotFoundException('File not found');
+    }
+
+    if (!fileStat.isFile()) {
+      throw new NotFoundException('File not found');
+    }
+
+    return createReadStream(filePath);
+  }
+
+  createPreviewUrl(fileKey: string) {
+    const endpoint = `uploads/${fileKey}`;
+    return join(this.appUrl, endpoint);
   }
 }

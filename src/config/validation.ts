@@ -7,6 +7,7 @@ export const validationSchema = Joi.object({
     .default('development'),
   APP_PORT: Joi.number().port().default(3000),
   APP_DEBUG: Joi.boolean().default(false),
+  APP_URL: Joi.string().required(),
   DATABASE_HOST: Joi.string().required(),
   DATABASE_PORT: Joi.number().port().required(),
   DATABASE_NAME: Joi.string().required(),

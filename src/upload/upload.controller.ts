@@ -70,7 +70,7 @@ export class UploadController {
     const isImage = file.mimetype.startsWith('image/');
 
     if (isImage && file.size > MAX_IMAGE_SIZE) {
-      throw new BadRequestException('Image size must not exceed 10 MB');
+      throw new BadRequestException(`Image size must not exceed ${MAX_IMAGE_SIZE} byte`);
     }
 
     const upload: UploadResponseDto = await this.uploadService.create(file);

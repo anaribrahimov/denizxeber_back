@@ -8,10 +8,11 @@ import { MediaService } from "../common/services/media.service.js";
 import { ImageProcessorService } from "../common/services/image-processor.service.js";
 import { UploadMapper } from "./upload.mapper.js";
 import { VideoProcessorService } from "../common/services/video-processor.service.js";
+import { UploadVersion } from "./upload-version.entity.js";
 // import { StorageService } from "../common/services/storage-1.service.js";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Upload])],
+  imports: [TypeOrmModule.forFeature([Upload, UploadVersion])],
   controllers: [UploadController],
   providers: [
     UploadService, 

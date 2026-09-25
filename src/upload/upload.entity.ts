@@ -3,9 +3,11 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
+import { UploadVersion } from './upload-version.entity.js';
 
 export enum UploadType {
   PRIVATE = 'private',
@@ -42,8 +44,9 @@ export class Upload {
   @Column({
     name: 'file_name',
     type: 'varchar',
-    length: 255,
+    length: 100,
   })
+  @Unique('idx_uploads_file_name', ['file_name'])
   fileName: string;
 
   @Column({
@@ -55,18 +58,26 @@ export class Upload {
   filePath: string;
 
   @Column({
-    name: 'mime_type',
+    name: 'file_key',
+    type: 'varchar',
+    length: 255,
+  })
+  @Unique('idx_uploads_file_key', ['file_key'])
+  fileKey: string;
+
+  @Column({
+    name: 'file_mimetype',
     type: 'varchar',
     length: 100,
   })
-  mimeType: string;
+  fileMimeType: string;
 
   @Column({
-    name: 'file_size_in_bytes',
+    name: 'file_size_byte',
     type: 'bigint',
     unsigned: true,
   })
-  fileSizeInBytes: number|null;
+  fileSizeByte: number|null;
 
   @Column({
     name: 'file_width',
@@ -85,42 +96,11 @@ export class Upload {
   fileHeight: number | null;
 
   @Column({
-    name: 'thumb_path',
-    type: 'varchar',
-    nullable: true
-  })
-  @Unique('UQ_uploads_thumb_path', ['thumb_path'])
-  thumbPath: string | null;
-
-  @Column({
-    name: 'thumb_width',
-    type: 'int',
-    unsigned: true,
-    nullable: true,
-  })
-  thumbWidth: number | null;
-
-  @Column({
-    name: 'thumb_height',
-    type: 'int',
-    unsigned: true,
-    nullable: true,
-  })
-  thumbHeight: number | null;
-
-  @Column({
-    name: 'thumb_size_in_bytes',
+    name: 'duration_sec',
     type: 'bigint',
     unsigned: true,
   })
-  thumbSizeInBytes: number | null;
-
-  @Column({
-    name: 'duration_in_sec',
-    type: 'bigint',
-    unsigned: true,
-  })
-  durationInSec: number | null;
+  durationSec: number | null;
 
   @CreateDateColumn({
     name: 'created_at',
@@ -135,4 +115,11 @@ export class Upload {
     nullable: true,
   })
   deletedAt: Date | null;
+
+  /**
+   * Relations
+   */
+
+  @OneToMany(() => UploadVersion, (uploadVersion) => uploadVersion.upload)
+  versions: UploadVersion[] | null;
 }
