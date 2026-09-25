@@ -10,7 +10,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Upload } from '../uploads/upload.entity.js';
+import { Upload } from '../upload/upload.entity.js';
 import { Role } from '../roles/role.entity.js';
 
 @Entity('users')

@@ -20,13 +20,14 @@ import {
 } from 'node:path';
 import { ConfigService } from '@nestjs/config';
 import { createReadStream, existsSync } from 'node:fs';
+import { FileRange } from '../interfaces/file-stream.interface.js';
 
 @Injectable()
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
 
   private readonly uploadsPath: string;
-  private readonly appUrl: string; 
+  private readonly appUrl: string;
 
   constructor(
     private readonly configService: ConfigService,
@@ -49,6 +50,24 @@ export class StorageService {
     await mkdir(directory, {
       recursive: true,
     });
+  }
+
+  async getFileSizeByte(fileKey: string): Promise<number> {
+    const filePath = this.resolveSafePath(fileKey);
+
+    let fileStat;
+
+    try {
+      fileStat = await stat(filePath);
+    } catch {
+      throw new NotFoundException('File not found');
+    }
+
+    if (!fileStat.isFile()) {
+      throw new NotFoundException('File not found');
+    }
+
+    return fileStat.size;
   }
 
   async createUploadDirectory(
@@ -150,27 +169,17 @@ export class StorageService {
     );
   }
 
-  async readFileStream(relativePath: string) {
+  readFileStream(relativePath: string, range?: FileRange): NodeJS.ReadableStream {
+    const filePath = this.resolveSafePath(relativePath);
+    return range ? createReadStream(filePath, range) : createReadStream(filePath);
+  }
+
+  private resolveSafePath(relativePath: string): string {
     const filePath = resolve(join(this.uploadsPath, relativePath));
-
-    // Prevent ../../ path traversal
     if (!filePath.startsWith(this.uploadsPath + sep)) {
-      throw new NotFoundException('File not found');
+      throw new NotFoundException('File not found'); // path traversal guard
     }
-
-    let fileStat;
-
-    try {
-      fileStat = await stat(filePath);
-    } catch {
-      throw new NotFoundException('File not found');
-    }
-
-    if (!fileStat.isFile()) {
-      throw new NotFoundException('File not found');
-    }
-
-    return createReadStream(filePath);
+    return filePath;
   }
 
   createPreviewUrl(fileKey: string) {

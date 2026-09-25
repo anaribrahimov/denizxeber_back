@@ -6,6 +6,9 @@ import { UploadMapper } from "./upload.mapper.js";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, Repository } from "typeorm";
 import { UploadVersion, UploadVersionType } from "./upload-version.entity.js";
+import { parseRangeHeader } from "../common/utils/range.util.js";
+import { RangeNotSatisfiableException } from "../common/exceptions/range-not-satisfiable.exception.js";
+import { ReadFileResult } from "../common/interfaces/file-stream.interface.js";
 
 @Injectable()
 export class UploadService {
@@ -103,28 +106,75 @@ export class UploadService {
     return this.uploadMapper.toUploadResponseDto(upload);
   }
 
-  // public async readFile(filePath: string) {
-  //   // find upload
-  //   const upload = await this.uploadRepository
-  //     .findOne({
-  //       where: [
-  //         { filePath: filePath },
-  //         { thumbPath: filePath }
-  //       ]
-  //     });
+  async readFile(
+    fileKey: string,
+    rangeHeader: string | undefined | null,
+  ): Promise<ReadFileResult> {
+    const upload = await this.uploadRepository
+      .createQueryBuilder('upload')
+      .leftJoinAndSelect('upload.versions', 'version')
+      .where('upload.fileKey = :fileKey', { fileKey })
+      .orWhere('version.fileKey = :fileKey', { fileKey })
+      .getOne();
 
-  //   if (!upload) {
-  //     throw new NotFoundException("File not found");
-  //   }
+    if (!upload) {
+      throw new NotFoundException('File not found');
+    }
 
-  //   const stream = await this.storageService.readFileStream(filePath);
+    let mimetype: string;
+    let sizeByte: number|null;
+    let durationSec: number | null = null;
 
-  //   const isThumb = filePath === upload.thumbPath;
+    if (upload.fileKey === fileKey) {
+      mimetype = upload.fileMimeType;
+      sizeByte = upload.fileSizeByte;
+      durationSec = upload.durationSec ?? null;
+    } else {
+      const version: UploadVersion | undefined = upload.versions?.find(
+        (v) => v.fileKey === fileKey,
+      );
 
-  //   return {
-  //     stream,
-  //     mimeType: isThumb ? upload.thumb upload.mimeType,
-  //     size: upload.s
-  //   }
-  // }
+      if (!version) {
+        throw new NotFoundException('File not found');
+      }
+
+      mimetype = version.fileMimeType;
+      sizeByte = version.fileSizeByte;
+    }
+
+    if (!sizeByte) {
+      sizeByte = await this.storageService.getFileSizeByte(fileKey);
+    }
+
+    const range = parseRangeHeader(rangeHeader, sizeByte);
+
+    if (!range) {
+      const stream = this.storageService.readFileStream(fileKey);
+      return {
+        stream,
+        mimetype,
+        sizeByte,
+        durationSec,
+        start: 0,
+        end: sizeByte - 1,
+        status: 200,
+      };
+    }
+
+    const { start, end } = range;
+    if (start < 0 || end >= sizeByte || start > end) {
+      throw new RangeNotSatisfiableException(sizeByte);
+    }
+
+    const stream = this.storageService.readFileStream(fileKey, { start, end });
+    return {
+      stream,
+      mimetype,
+      sizeByte,
+      durationSec,
+      start,
+      end,
+      status: 206,
+    };
+  }
 }

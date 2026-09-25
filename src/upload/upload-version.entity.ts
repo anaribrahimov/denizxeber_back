@@ -90,7 +90,9 @@ export class UploadVersion {
    * Relations
    */
 
-  @ManyToOne(() => Upload, (upload) => upload.versions)
+  @ManyToOne(() => Upload, (upload) => upload.versions, {
+    lazy: true,
+  })
   @JoinColumn({
     name: 'upload_id'
   })

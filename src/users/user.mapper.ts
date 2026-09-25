@@ -5,7 +5,7 @@ import { CreateUserDto } from "./dto/create-user.dto.js";
 import { User } from "./user.entity.js";
 import { UserResponseDTO } from "./dto/user-response.dto.js";
 import { Language } from "../language/language.entity.js";
-import { Upload } from "../uploads/upload.entity.js";
+import { Upload } from "../upload/upload.entity.js";
 
 export class UserMapper {
 
