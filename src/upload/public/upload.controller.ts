@@ -3,9 +3,11 @@ import { UploadService } from "../upload.service.js";
 import { Public } from "../../auth/decorators/public.decorator.js";
 import { RangeNotSatisfiableException } from "../../common/exceptions/range-not-satisfiable.exception.js";
 import { ReadFileResult } from "../../common/interfaces/file-stream.interface.js";
+import { ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 
 @Controller()
 @Public()
+@ApiTags('Uploads')
 export class PublicUploadController {
 
   constructor(
@@ -13,6 +15,19 @@ export class PublicUploadController {
   ) { }
 
   @Get('/content/uploads/*fileKey')
+  @ApiOperation({ summary: 'Read file content' })
+  @ApiResponse({ 
+    status: 200, 
+    description: 'File uploaded successfully',
+  })
+  @ApiResponse({ 
+    status: 206, 
+    description: 'Range of the file'
+  })
+  @ApiResponse({
+    status: 416,
+    description: 'Range not satisfiable'
+  })
   public async readFile(
     @Param('fileKey') params: string[],
     @Headers('range') rangeHeader: string | undefined,

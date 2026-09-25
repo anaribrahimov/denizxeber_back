@@ -19,7 +19,7 @@ import { UnauthorizedResponseDto } from "../common/dto/unauthorized-response.dto
 @UseGuards(RolesGuard)
 @UseGuards(LanguageGuard)
 @Roles('Admin', 'User')
-@ApiTags('uploads')
+@ApiTags('Uploads')
 @ApiResponse({
   status: 401,
   description: 'Unauthenticated',
