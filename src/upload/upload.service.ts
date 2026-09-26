@@ -9,6 +9,9 @@ import { UploadVersion, UploadVersionType } from "./upload-version.entity.js";
 import { parseRangeHeader } from "../common/utils/range.util.js";
 import { RangeNotSatisfiableException } from "../common/exceptions/range-not-satisfiable.exception.js";
 import { ReadFileResult } from "../common/interfaces/file-stream.interface.js";
+import { UploadResponseDto } from "./dto/upload-response.dto.js";
+import { PaginatedResult } from "../common/interfaces/paginated-result.interface.js";
+import { PaginateUploadDto } from "./dto/paginate-upload.dto.js";
 
 @Injectable()
 export class UploadService {
@@ -22,7 +25,7 @@ export class UploadService {
     private readonly dataSource: DataSource,
   ){}
   
-  public async create(file: Express.Multer.File): Promise<any> {
+  public async create(file: Express.Multer.File): Promise<UploadResponseDto> {
     const processedFile = await this.mediaService.processUpload(file);
     // console.log(processedFile);
 
@@ -89,7 +92,7 @@ export class UploadService {
     }
   }
 
-  public async findById(id: number) {
+  public async findById(id: number): Promise<UploadResponseDto> {
     const upload = await this.uploadRepository.findOne({
       where: {
         id
@@ -184,5 +187,30 @@ export class UploadService {
       throw new NotFoundException('Upload not found');
     }
     await this.uploadRepository.softDelete(id);
+  }
+
+  async findPaginated(query: PaginateUploadDto): Promise<PaginatedResult<UploadResponseDto>> {
+    const { limit, page } = query;
+
+    const qb = this.uploadRepository
+      .createQueryBuilder('uploads')
+      .leftJoinAndSelect('uploads.versions', 'versions')
+      .where('uploads.type = :type', { type: UploadType.PUBLIC })
+
+    qb.orderBy('uploads.id', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data: data.map((item: Upload) => this.uploadMapper.toUploadResponseDto(item)),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      }
+    }
   }
 }

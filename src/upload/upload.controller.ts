@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseIntPipe, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseIntPipe, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { UploadService } from "./upload.service.js";
 import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -12,9 +12,11 @@ import { LanguageGuard } from "../common/guards/language.guard.js";
 import { Roles } from "../auth/decorators/roles.decorator.js";
 import { UnauthenticatedResponseDto } from "../common/dto/unauthenticated-response.dto.js";
 import { UnauthorizedResponseDto } from "../common/dto/unauthorized-response.dto.js";
+import { PaginateUploadDto } from "./dto/paginate-upload.dto.js";
+import { PaginatedResult } from "../common/interfaces/paginated-result.interface.js";
+import { OpenapiUploadPaginatedResponseDto } from "./dto/openapi/paginated-response.dto.js";
 
-
-@Controller('/admin/:lang/uploads')
+@Controller('/:lang/admin/uploads')
 @UseGuards(RolesGuard)
 @UseGuards(LanguageGuard)
 @Roles('Admin', 'User')
@@ -129,4 +131,15 @@ export class UploadController {
     await this.uploadService.delete(id);
   }
 
+  @Get()
+  @ApiOperation({ summary: 'Get uploads' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    type: OpenapiUploadPaginatedResponseDto,
+  })
+  async findPaginated(
+    @Query() query: PaginateUploadDto
+  ): Promise<PaginatedResult<UploadResponseDto>> {
+    return this.uploadService.findPaginated(query);
+  }
 }
