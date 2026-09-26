@@ -177,4 +177,12 @@ export class UploadService {
       status: 206,
     };
   }
+
+  async delete(id: number): Promise<void> {
+    const upload = await this.uploadRepository.existsBy({ id });
+    if (!upload) {
+      throw new NotFoundException('Upload not found');
+    }
+    await this.uploadRepository.softDelete(id);
+  }
 }

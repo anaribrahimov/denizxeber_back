@@ -1,10 +1,9 @@
-import { BadRequestException, Controller, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseIntPipe, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseIntPipe, Post, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { UploadService } from "./upload.service.js";
 import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { commonUploadFilter, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, multerStorageConfig } from "../common/multer/multer.config.js";
 import { FileCleanupInterceptor } from "../common/interceptors/file-cleanup.interceptor.js";
-import { Public } from "../auth/decorators/public.decorator.js";
 import { UploadResponseDto } from "./dto/upload-response.dto.js";
 import { UploadResultDto } from "./dto/upload-result.dto.js";
 import { CommonErrorDto } from "../common/dto/common-error.dto.js";
@@ -112,6 +111,22 @@ export class UploadController {
   async find(@Param('id', ParseIntPipe) id: number): Promise<UploadResultDto> {
     const upload = await this.uploadService.findById(id);
     return { data: upload };
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete upload' })
+  @ApiResponse({ 
+    status: HttpStatus.NO_CONTENT, 
+    description: 'Upload deleted',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'Upload not found',
+    type: CommonErrorDto,
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async delete(@Param('id', ParseIntPipe) id: number) {
+    await this.uploadService.delete(id);
   }
 
 }

@@ -3,13 +3,13 @@ import { Upload, UploadType } from "./upload.entity.js";
 import { UploadResponseDto } from "./dto/upload-response.dto.js";
 import { UploadVersion, UploadVersionType } from "./upload-version.entity.js";
 import { UploadVersionResponseDto } from "./dto/upload-version-response.dto.js";
-import { StorageService } from "../common/services/storage.service.js";
+import { MediaService } from "../common/services/media.service.js";
 
 @Injectable()
 export class UploadMapper {
 
   constructor(
-    private readonly storageService: StorageService,
+    private readonly mediaService: MediaService,
   ) {}
 
   public toUploadVersionEntity(
@@ -71,7 +71,7 @@ export class UploadMapper {
     dto.fileHeight = upload.fileHeight;
     dto.durationSec = upload.durationSec;
     dto.createdAt = upload.createdAt;
-    dto.preview = this.storageService.createPreviewUrl(upload.fileKey);
+    dto.preview = this.mediaService.createPreviewUrl(upload.fileKey);
     dto.versions = 
       upload.versions?.map(
         (uploadVersion: UploadVersion) => ({
@@ -82,7 +82,7 @@ export class UploadMapper {
           fileWidth: uploadVersion.fileWidth,
           fileHeight: uploadVersion.fileHeight,
           fileSizeByte: uploadVersion.fileSizeByte,
-          preview: this.storageService.createPreviewUrl(uploadVersion.fileKey),
+          preview: this.mediaService.createPreviewUrl(uploadVersion.fileKey),
         })
       ) as UploadVersionResponseDto[] ?? [];
     return dto;

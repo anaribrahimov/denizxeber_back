@@ -6,14 +6,21 @@ import { v4 as uuidv4 } from 'uuid';
 import { ImageProcessorService } from './image-processor.service.js';
 import { StorageService } from './storage.service.js';
 import { VideoProcessorService } from './video-processor.service.js';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class MediaService {
+
+  private readonly appUrl: string;
+
   constructor(
     private readonly storageService: StorageService,
     private readonly imageProcessorService: ImageProcessorService,
     private readonly videoProcessorService: VideoProcessorService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.appUrl = this.configService.getOrThrow<string>('app.url');
+  }
 
   async processUpload(file: Express.Multer.File) {
     const isImage = file.mimetype.startsWith('image/');
@@ -186,5 +193,10 @@ export class MediaService {
 
       throw error;
     }
+  }
+
+  createPreviewUrl(fileKey: string) {
+    const endpoint = `content/uploads/${fileKey}`;
+    return this.appUrl + '/' + endpoint;
   }
 }

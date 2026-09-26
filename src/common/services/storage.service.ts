@@ -27,7 +27,6 @@ export class StorageService {
   private readonly logger = new Logger(StorageService.name);
 
   private readonly uploadsPath: string;
-  private readonly appUrl: string;
 
   constructor(
     private readonly configService: ConfigService,
@@ -37,7 +36,6 @@ export class StorageService {
         'storage.localUploadsPath',
       ),
     );
-    this.appUrl = this.configService.getOrThrow<string>('app.url');
   }
 
   get rootPath(): string {
@@ -180,10 +178,5 @@ export class StorageService {
       throw new NotFoundException('File not found'); // path traversal guard
     }
     return filePath;
-  }
-
-  createPreviewUrl(fileKey: string) {
-    const endpoint = `uploads/${fileKey}`;
-    return join(this.appUrl, endpoint);
   }
 }
