@@ -1,18 +1,12 @@
-import { Injectable } from "@nestjs/common";
 import { Upload, UploadType } from "./upload.entity.js";
 import { UploadResponseDto } from "./dto/upload-response.dto.js";
 import { UploadVersion, UploadVersionType } from "./upload-version.entity.js";
 import { UploadVersionResponseDto } from "./dto/upload-version-response.dto.js";
-import { MediaService } from "../common/services/media.service.js";
+import { createPreviewUrl } from "../common/utils/media.util.js";
 
-@Injectable()
 export class UploadMapper {
 
-  constructor(
-    private readonly mediaService: MediaService,
-  ) {}
-
-  public toUploadVersionEntity(
+  public static toUploadVersionEntity(
     upload: Upload,
     version: UploadVersionType,
     fileName: string,
@@ -21,9 +15,9 @@ export class UploadMapper {
     fileWidth: number|null,
     fileHeight: number|null,
     fileSizeByte: number|null,
-  ) {
+  ): UploadVersion {
     const uploadVersion = new UploadVersion();
-    uploadVersion.upload = upload;
+    uploadVersion.uploadId = upload.id;
     uploadVersion.version = version;
     uploadVersion.fileName = fileName;
     uploadVersion.fileMimeType = fileMimeType;
@@ -34,7 +28,7 @@ export class UploadMapper {
     return uploadVersion;
   }
 
-  public toEntity(
+  public static toEntity(
     type: UploadType,
     fileName: string,
     fileOriginalName: string,
@@ -61,7 +55,7 @@ export class UploadMapper {
     return upload;
   }
 
-  public toUploadResponseDto(upload: Upload): UploadResponseDto {
+  public static toUploadResponseDto(upload: Upload, publicUrl: string): UploadResponseDto {
     const dto = new UploadResponseDto();
     dto.id = upload.id;
     dto.fileOriginalName = upload.fileOriginalName;
@@ -71,7 +65,7 @@ export class UploadMapper {
     dto.fileHeight = upload.fileHeight;
     dto.durationSec = upload.durationSec;
     dto.createdAt = upload.createdAt;
-    dto.preview = this.mediaService.createPreviewUrl(upload.fileKey);
+    dto.preview = createPreviewUrl(publicUrl, upload.fileKey);
     dto.versions = 
       upload.versions?.map(
         (uploadVersion: UploadVersion) => ({
@@ -82,7 +76,7 @@ export class UploadMapper {
           fileWidth: uploadVersion.fileWidth,
           fileHeight: uploadVersion.fileHeight,
           fileSizeByte: uploadVersion.fileSizeByte,
-          preview: this.mediaService.createPreviewUrl(uploadVersion.fileKey),
+          preview: createPreviewUrl(publicUrl, uploadVersion.fileKey),
         })
       ) as UploadVersionResponseDto[] ?? [];
     return dto;

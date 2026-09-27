@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import { Upload, UploadType } from "./upload.entity.js";
-import { MediaService } from "../common/services/media.service.js";
+import { MediaService, ProcessedFileResult } from "../common/services/media.service.js";
 import { StorageService } from "../common/services/storage.service.js";
 import { UploadMapper } from "./upload.mapper.js";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, Repository } from "typeorm";
+import { DataSource, QueryRunner, Repository } from "typeorm";
 import { UploadVersion, UploadVersionType } from "./upload-version.entity.js";
 import { parseRangeHeader } from "../common/utils/range.util.js";
 import { RangeNotSatisfiableException } from "../common/exceptions/range-not-satisfiable.exception.js";
@@ -16,17 +16,72 @@ import { PaginateUploadDto } from "./dto/paginate-upload.dto.js";
 @Injectable()
 export class UploadService {
 
+  private readonly publicUrl: string;
+
   constructor(
     private readonly storageService: StorageService,
     private readonly mediaService: MediaService,
-    private readonly uploadMapper: UploadMapper,
     @InjectRepository(Upload)
     private readonly uploadRepository: Repository<Upload>,
     private readonly dataSource: DataSource,
-  ){}
+  ){
+    this.publicUrl = this.mediaService.getFilePublicUrl();
+  }
+
+  public getPublicUrl(): string {
+    return this.publicUrl;
+  }
+
+  public async saveUploadTransactional(
+    processedFile: ProcessedFileResult, 
+    queryRunner: QueryRunner,
+    uploadType: UploadType,
+  ): Promise<Upload> {
+    // create upload entity
+    let upload: Upload = UploadMapper.toEntity(
+      uploadType,
+      processedFile.filename,
+      processedFile.originalName,
+      processedFile.fileKey,
+      processedFile.mimeType,
+      processedFile.size,
+      processedFile.width,
+      processedFile.height,
+      processedFile.durationInSec ?? null,
+      null
+    );
+
+    // save upload
+    await queryRunner.manager.save(upload);
+
+    if (processedFile.thumbnailKey) {
+      const version: UploadVersion = UploadMapper.toUploadVersionEntity(
+        upload,
+        UploadVersionType.SMALL,
+        processedFile.thumbnailFilename!,
+        processedFile.thumbnailMimeType!,
+        processedFile.thumbnailKey,
+        processedFile.thumbnailWidth,
+        processedFile.thumbnailHeight,
+        processedFile.thumbnailSizeInBytes
+      )
+
+      // save upload versions
+      await queryRunner.manager.save(version);
+
+      // set upload entity versions
+      upload.versions = [version];
+    }
+
+    return upload;
+  }
+
+  public async processFile(file: Express.Multer.File): Promise<ProcessedFileResult> {
+    return this.mediaService.processUpload(file);
+  }
   
   public async create(file: Express.Multer.File): Promise<UploadResponseDto> {
-    const processedFile = await this.mediaService.processUpload(file);
+    const processedFile = await this.processFile(file);
     // console.log(processedFile);
 
     const queryRunner = this.dataSource.createQueryRunner();
@@ -34,47 +89,17 @@ export class UploadService {
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
+    // const publicUrl = this.mediaService.getFilePublicUrl();
+
     try {
 
-      // create upload entity
-      let upload: Upload = this.uploadMapper.toEntity(
-        UploadType.PUBLIC,
-        processedFile.filename,
-        processedFile.originalName,
-        processedFile.fileKey,
-        processedFile.mimeType,
-        processedFile.size,
-        processedFile.width,
-        processedFile.height,
-        processedFile.durationInSec,
-        null
-      );
-
-      // save upload
-      await queryRunner.manager.save(upload);
-
-      if (processedFile.thumbnailKey) {
-        const version: UploadVersion = this.uploadMapper.toUploadVersionEntity(
-          upload,
-          UploadVersionType.SMALL,
-          processedFile.thumbnailFilename!,
-          processedFile.thumbnailMimeType,
-          processedFile.thumbnailKey,
-          processedFile.thumbnailWidth,
-          processedFile.thumbnailHeight,
-          processedFile.thumbnailSizeInBytes
-        )
-
-        // save upload versions
-        await queryRunner.manager.save(version);
-
-        // set upload entity versions
-        upload.versions = [version];
-      }
+      // save upload to db
+      const upload: Upload = 
+        await this.saveUploadTransactional(processedFile, queryRunner, UploadType.PUBLIC);
 
       await queryRunner.commitTransaction(); // commit transaction
 
-      return this.uploadMapper.toUploadResponseDto(upload);
+      return UploadMapper.toUploadResponseDto(upload, this.publicUrl);
 
     } catch (err) {
 
@@ -106,7 +131,7 @@ export class UploadService {
       throw new NotFoundException("Upload not found");
     }
 
-    return this.uploadMapper.toUploadResponseDto(upload);
+    return UploadMapper.toUploadResponseDto(upload, this.publicUrl);
   }
 
   async readFile(
@@ -204,7 +229,11 @@ export class UploadService {
     const [data, total] = await qb.getManyAndCount();
 
     return {
-      data: data.map((item: Upload) => this.uploadMapper.toUploadResponseDto(item)),
+      data: data
+        .map(
+          (item: Upload) => 
+            UploadMapper.toUploadResponseDto(item, this.publicUrl)
+        ),
       meta: {
         total,
         page,

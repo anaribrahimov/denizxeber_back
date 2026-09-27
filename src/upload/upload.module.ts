@@ -6,7 +6,6 @@ import { UploadService } from "./upload.service.js";
 import { StorageService } from "../common/services/storage.service.js";
 import { MediaService } from "../common/services/media.service.js";
 import { ImageProcessorService } from "../common/services/image-processor.service.js";
-import { UploadMapper } from "./upload.mapper.js";
 import { VideoProcessorService } from "../common/services/video-processor.service.js";
 import { UploadVersion } from "./upload-version.entity.js";
 import { PublicUploadController } from "./public/upload.controller.js";
@@ -18,8 +17,7 @@ import { PublicUploadController } from "./public/upload.controller.js";
     UploadService, 
     StorageService, 
     MediaService, 
-    ImageProcessorService, 
-    UploadMapper,
+    ImageProcessorService,
     VideoProcessorService,
   ],
   exports: [UploadService],

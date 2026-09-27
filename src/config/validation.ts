@@ -18,4 +18,5 @@ export const validationSchema = Joi.object({
   JWT_ACCESS_EXPIRES_IN: Joi.string().required(),
   REFRESH_TOKEN_TTL_DAYS: Joi.string().optional()
     .pattern(/^\d$/),
+  FILES_PUBLIC_URL: Joi.string().required().trim(),
 });

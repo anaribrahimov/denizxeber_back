@@ -8,10 +8,41 @@ import { StorageService } from './storage.service.js';
 import { VideoProcessorService } from './video-processor.service.js';
 import { ConfigService } from '@nestjs/config';
 
+export interface ProcessedFileResult {
+  originalName: string,
+
+  filename: string,
+
+  mimeType: string,
+  size: number,
+
+  path: string,
+
+  fileKey: string,
+
+  width: number | null,
+  height: number | null,
+
+  durationInSec?: number | null,
+
+  thumbnailPath: string | null,
+
+  thumbnailFilename: string | null,
+
+  thumbnailMimeType: string | null,
+
+  thumbnailKey: string | null,
+
+  thumbnailSizeInBytes: number|null,
+  thumbnailWidth: number|null,
+  thumbnailHeight: number|null,
+}
+
 @Injectable()
 export class MediaService {
 
   private readonly appUrl: string;
+  private readonly filesPublicUrl: string;
 
   constructor(
     private readonly storageService: StorageService,
@@ -20,9 +51,11 @@ export class MediaService {
     private readonly configService: ConfigService,
   ) {
     this.appUrl = this.configService.getOrThrow<string>('app.url');
+    this.filesPublicUrl =
+      this.configService.getOrThrow<string>('app.filesPublicUrl');
   }
 
-  async processUpload(file: Express.Multer.File) {
+  async processUpload(file: Express.Multer.File): Promise<ProcessedFileResult> {
     const isImage = file.mimetype.startsWith('image/');
 
     const isVideo = file.mimetype.startsWith('video/');
@@ -198,5 +231,9 @@ export class MediaService {
   createPreviewUrl(fileKey: string) {
     const endpoint = `content/uploads/${fileKey}`;
     return this.appUrl + '/' + endpoint;
+  }
+
+  getFilePublicUrl() {
+    return this.filesPublicUrl;
   }
 }
