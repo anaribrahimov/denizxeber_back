@@ -4,11 +4,23 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { validationSchema } from './config/validation.js';
 
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
+// import { AppController } from './app.controller.js';
+// import { AppService } from './app.service.js';
 import { appConfig } from './config/app.config.js';
 import { databaseConfig } from './config/database.config.js';
 import { LanguagesModule } from './language/languages.module.js';
+import { UsersModule } from './users/users.module.js';
+import { RolesModule } from './roles/roles.module.js';
+import { UploadModule } from './upload/upload.module.js';
+import { storageConfig } from './config/storage.config.js';
+import { AuthModule } from './auth/auth.module.js';
+import { securityConfig } from './config/security.config.js';
+import { ScheduleModule } from '@nestjs/schedule';
+import { APP_FILTER } from '@nestjs/core';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
+import { WinstonModule } from 'nest-winston';
+import { winstonConfig } from './logger/winston.config.js';
+import { CategoryModule } from './category/category.module.js';
 
 @Module({
   imports: [
@@ -18,6 +30,8 @@ import { LanguagesModule } from './language/languages.module.js';
       load: [
         appConfig,
         databaseConfig,
+        storageConfig,
+        securityConfig,
       ],
 
       envFilePath: [
@@ -27,6 +41,7 @@ import { LanguagesModule } from './language/languages.module.js';
 
       validationSchema,
     }),
+    WinstonModule.forRoot(winstonConfig),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
 
@@ -43,12 +58,22 @@ import { LanguagesModule } from './language/languages.module.js';
         autoLoadEntities: true,
 
         synchronize: false, // Set to false in production to avoid data loss
+        timezone: 'Z', // ⭐ Forces TypeORM to use UTC instead of the server's local time zone
       }),
     }),
 
+    ScheduleModule.forRoot(),
+
     LanguagesModule,
+    UploadModule,
+    RolesModule,
+    UsersModule,
+    AuthModule,
+    CategoryModule,
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  // controllers: [AppController],
+  providers: [
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
+  ],
 })
 export class AppModule {}

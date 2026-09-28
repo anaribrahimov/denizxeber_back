@@ -1,0 +1,352 @@
+import { ForbiddenException, Inject, Injectable, NotFoundException, Search } from '@nestjs/common';
+import { CreateUserDto } from './dto/create-user.dto.js';
+import { User } from './user.entity.js';
+import { DataSource, QueryRunner, Repository } from 'typeorm';
+import { Role } from '../roles/role.entity.js';
+import { ValidationException } from '../common/exceptions/validation.exception.js';
+import { Language } from '../language/language.entity.js';
+import { UserMapper } from './user.mapper.js';
+import { UserResponseDTO } from './dto/user-response.dto.js';
+import { Upload, UploadType } from '../upload/upload.entity.js';
+import { deleteFile } from '../common/utils/storage.util.js';
+import { UpdateUserDTO } from './dto/update-user.dto.js';
+import { hashPassword } from '../common/utils/auth.util.js';
+import { InjectRepository } from '@nestjs/typeorm';
+import { PaginatedResult } from '../common/interfaces/paginated-result.interface.js';
+import { PaginateUserDto } from './dto/paginate-user.dto.js';
+import { AuthUser } from '../auth/interfaces/auth-user.interface.js';
+import { roles } from '../roles/role.cache.js';
+import { ProcessedFileResult } from '../common/services/media.service.js';
+import { UploadService } from '../upload/upload.service.js';
+
+@Injectable()
+export class UsersService {
+
+  private readonly publicUrl: string;
+
+  constructor(
+    // @Inject(storageConfig.KEY)
+    // private readonly storage: ConfigType<typeof storageConfig>,
+
+    private readonly dataSource: DataSource,
+
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
+
+    // @InjectRepository(Role)
+    // private readonly roleRepository: Repository<Role>,
+
+    @InjectRepository(Language)
+    private readonly languageRepository: Repository<Language>,
+
+    private readonly uploadService: UploadService,
+  ) {
+    this.publicUrl = this.uploadService.getPublicUrl();
+  }
+
+  async create(
+    dto: CreateUserDto, 
+    profileImage: Express.Multer.File
+  ): Promise<UserResponseDTO> {
+    const errors: Record<string, string[]> = {};
+
+    let processedFile: ProcessedFileResult | null = null;
+    
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      if (profileImage) {
+        processedFile = await this.uploadService.processFile(profileImage);
+      }
+
+      // find user
+      const user = await queryRunner.manager.existsBy(User, { email: dto.email });
+
+      // console.log(user);
+
+      if (user) errors['email'] = ['Email is already in use'];
+
+      const role = await queryRunner.manager.findOneBy(Role, { id: dto.roleId });
+
+      // console.log('role', role);
+
+      if (!role) {
+        errors['roleId'] = ['Role not found'];
+      }
+
+      const languages = await queryRunner.manager.find(Language);
+
+      // console.log(languages, dto.langIds);
+
+      const langErrors = dto.langIds
+        .reduce((accumulator: string[], langId) => {
+          if (!languages.find((item) => item.id === langId)) {
+            accumulator.push('Language not found with id: ' + langId);
+          }
+          return accumulator;
+        }, []);
+
+      if (langErrors.length) {
+        errors['langIds'] = langErrors;
+      }
+
+      if (Object.keys(errors).length) throw new ValidationException(errors);
+
+      // save profile image
+      const savedUpload: Upload | null = 
+        processedFile 
+          ? await this.uploadService
+              .saveUploadTransactional(processedFile, queryRunner, UploadType.PRIVATE) 
+          : null;
+
+      const newUser = await UserMapper.toEntity(dto, role!, savedUpload);
+
+      // console.log(newUser);
+
+      // save user
+      const savedUser = await queryRunner.manager.save(User, newUser);
+
+      // console.log('saved user', savedUser);
+
+      await queryRunner.commitTransaction(); // commit transaction
+
+      return UserMapper.toResponseDTO(savedUser, languages, this.publicUrl);
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      if (profileImage) {
+        await deleteFile(profileImage.path);
+      }
+      if (processedFile && processedFile?.path) {
+        await deleteFile(processedFile!.path);
+        if (processedFile?.thumbnailPath) {
+          await deleteFile(processedFile.thumbnailPath);
+        }
+      }
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async update(
+    id: number, 
+    dto: UpdateUserDTO, 
+    authUser: AuthUser,
+    profileImage?: Express.Multer.File,
+  ): Promise<UserResponseDTO> {
+    if (!profileImage && !Object.values(dto).filter((item) => item !== undefined).length) {
+      throw new ValidationException({}, 'Not any params sent to update');
+    }
+
+    let processedFile: ProcessedFileResult | null = null;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      if (profileImage) {
+        processedFile = await this.uploadService.processFile(profileImage);
+      }
+
+      // find the user and lock the row for update
+      const user: User | null = await queryRunner.manager.findOne(User, {
+        where: {
+          id: id,
+        },
+        lock: {
+          mode: 'pessimistic_write'
+        }
+      });
+
+      if (!user) throw new NotFoundException('User not found: ' + id);
+
+      const languages = await queryRunner.manager.find(Language);
+
+      if (authUser.userId !== id && user.roleId === roles.Admin.id) {
+        // updating admin user not allowed
+        throw new ForbiddenException('Can not update user with admin role');   
+      }
+
+      const errors: Record<string, string[]> = {};
+
+      if (dto.firstName && dto.firstName != user.firstName) user.firstName = dto.firstName;
+      if (dto.lastName && dto.lastName != user.lastName) user.lastName = dto.lastName;
+      if (typeof dto.isActive === 'boolean') user.isActive = dto.isActive;
+
+      if (dto.langIds && dto.langIds.length) {
+        // get languages
+        const languages = await queryRunner.manager.find(Language);
+
+        const langErrors = dto.langIds
+          .reduce((accumulator: string[], langId: number) => {
+            if (!languages.find((item) => item.id === langId)) {
+              accumulator.push('Language not found with id: ' + langId);
+            }
+            return accumulator;
+          }, []);
+
+        if (langErrors.length) errors['lang_ids'] = langErrors;
+        else user.langIds = dto.langIds;
+      }
+
+      if (dto.roleId && dto.roleId !== user.roleId) {
+        const role = await queryRunner.manager.findOneBy(Role, { id: dto.roleId });
+        if (!role) errors['role_id'] = ['Role not found'];
+        else user.role = role;
+      }
+
+      if (Object.keys(errors).length) throw new ValidationException(errors);
+
+      if (processedFile || dto.removeProfileImage) {
+        if (user.profileImageId) {
+          // remove current upload record
+          await queryRunner.manager.softDelete(Upload, user.profileImageId);
+          user.profileImage = null;
+          user.profileImageId = null;
+        }
+
+        if (processedFile) {
+          const savedUpload: Upload = 
+            await this.uploadService
+              .saveUploadTransactional(processedFile, queryRunner, UploadType.PRIVATE);
+          user.profileImage = savedUpload;
+        }
+      }
+
+      if (dto.password) {
+        user.password = await hashPassword(dto.password);
+      }
+
+      // save user
+      await queryRunner.manager.save(user);
+
+      const updatedUser = await queryRunner.manager.findOne(User, {
+        where: {
+          id,
+        },
+        relations: {
+          role: true,
+          profileImage: {
+            versions: true
+          }
+        }
+      });
+
+      // console.log('updated user', updatedUser);
+
+      await queryRunner.commitTransaction(); // commit transaction
+
+      return UserMapper.toResponseDTO(updatedUser!, languages, this.publicUrl);
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      if (profileImage) await deleteFile(profileImage.path);
+      if (processedFile && processedFile?.path) {
+        await deleteFile(processedFile!.path);
+        if (processedFile?.thumbnailPath) {
+          await deleteFile(processedFile.thumbnailPath);
+        }
+      }
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async delete(id: number, authUser: AuthUser): Promise<void> {
+    const queryRunner = this.dataSource.createQueryRunner();
+
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      // find the user and lock the row for update
+      const user: User | null = await queryRunner.manager.findOne(User, {
+        where: {
+          id: id,
+        },
+        lock: {
+          mode: 'pessimistic_write'
+        }
+      });
+
+      if (!user) throw new NotFoundException('User not found: ' + id);
+
+      if (authUser.userId === id) {
+        throw new ForbiddenException('You can not delete yourself');
+      }
+
+      if (authUser.userId !== id && user.roleId === roles.Admin.id) {
+        // deleting admin user not allowed
+        throw new ForbiddenException('Can not delete user with admin role');   
+      }
+
+      await queryRunner.manager.softDelete(User, id);
+
+      await queryRunner.commitTransaction(); // commit transaction
+      
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async find(id: number): Promise<UserResponseDTO> {
+    // find user
+    const user = await this.usersRepository
+      .findOne({
+        relations: { 
+          role: true,
+          profileImage: {
+            versions: true,
+          }
+        },
+        where: { id },
+      });
+
+    if (!user) throw new NotFoundException('User was not found: ' + id);
+
+    const languages: Language[] = await this.languageRepository.find();
+
+    return UserMapper.toResponseDTO(user, languages, this.publicUrl);
+  }
+
+  async findPaginated(query: PaginateUserDto): Promise<PaginatedResult<UserResponseDTO>> {
+    const { limit, page, search } = query;
+
+    const qb = this.usersRepository
+      .createQueryBuilder('users')
+      .leftJoinAndSelect('users.role', 'roles')
+      .leftJoinAndSelect('users.profileImage', 'profileImage')
+      .leftJoinAndSelect('profileImage.versions', 'version');
+
+    const languages: Language[] = await this.languageRepository.find();
+
+    if (search) {
+      qb.andWhere(
+        '(users.email LIKE :search OR users.first_name LIKE :search OR users.last_name LIKE :search)',
+        { search: `%${search}%` }
+      )
+    }
+
+    qb.orderBy('users.id', 'DESC')
+      .skip((page - 1) * limit)
+      .take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return {
+      data: data.map((item: User) => UserMapper.toResponseDTO(item, languages, this.publicUrl)),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      }
+    }
+  }
+}
