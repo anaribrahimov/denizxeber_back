@@ -3,6 +3,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
+import { CreateUserDto } from '../../users/dto/create-user.dto.js';
 
 export class AppValidationPipe extends ValidationPipe {
   constructor() {
@@ -13,10 +14,11 @@ export class AppValidationPipe extends ValidationPipe {
 
       exceptionFactory: (errors: ValidationError[]) => {
         const formattedErrors: Record<string, string[]> = {};
-
+        // console.log('errors', errors);
         for (const error of errors) {
           if (error.constraints) {
-            const propertyName = this.toSnakeCase(error.property);
+            // const propertyName = this.toSnakeCase(error.property);
+            const propertyName = error.property;
             formattedErrors[propertyName] = Object.values(
               error.constraints,
             );

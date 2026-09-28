@@ -17,15 +17,14 @@ import { Expose, Transform } from 'class-transformer';
 
 export class CreateUserDto {
 
-  @Expose({ name: 'first_name' })
   @Transform(({ value }) => typeof value === 'string' ? value?.trim() : value)
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
   @Matches(
-    /^[a-zA-Z0-9\s]+$/,
+    /^(?=.*\p{L})[\p{L}\p{M}\p{N}'\- ]+$/u,
     {
-      message: 'Special characters not allowed',
+      message: 'Can only contain letters, numbers, spaces, hyphens (-), and apostrophes (\').',
       validateIf(object, value) {
         return typeof value === 'string' ? !!value.length : false;
       },
@@ -33,15 +32,14 @@ export class CreateUserDto {
   )
   firstName: string;
 
-  @Expose({ name: 'last_name' })
   @Transform(({ value }) => typeof value === 'string' ? value?.trim() : value)
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
   @Matches(
-    /^[a-zA-Z0-9\s]+$/,
+    /^(?=.*\p{L})[\p{L}\p{M}\p{N}'\- ]+$/u,
     {
-      message: 'Special characters not allowed',
+      message: 'Can only contain letters, numbers, spaces, hyphens (-), and apostrophes (\').',
       validateIf(object, value) {
         return typeof value === 'string' ? !!value.length : false;
       },
@@ -80,7 +78,6 @@ export class CreateUserDto {
   // @IsMatch('password', { message: 'Password confirmation does not match password' })
   // passwordConfirmation: string;
 
-  @Expose({ name: 'role_id' })
   @Transform(({ value }) => {
     if (value === undefined || value === null || typeof value !== 'string') return value;
     // Strict regex check: Only allow strings that contain digits only
@@ -92,13 +89,12 @@ export class CreateUserDto {
   })
   @IsInt()
   @IsNotEmpty()
-  @IsIn([1, 2], { message: 'role_id must be either 1 or 2' })
+  @IsIn([1, 2], { message: 'roleId must be either 1 or 2' })
   roleId: number;
 
-  @Expose({ name: 'lang_ids' })
   @IsArray()
-  @ArrayNotEmpty({ message: 'lang_ids should not be empty' })
-  @IsIn([1, 2, 3, 4, 5, 6], { message: 'Each lang_id can be either 1, 2, 3, 4, 5, 6', each: true })
+  @ArrayNotEmpty({ message: 'langIds should not be empty' })
+  @IsIn([1, 2, 3, 4, 5, 6], { message: 'Each langId can be either 1, 2, 3, 4, 5, 6', each: true })
   @Transform(({ value }) => {
     if (value === undefined) return undefined;
     if (!Array.isArray(value)) return value;
@@ -108,9 +104,8 @@ export class CreateUserDto {
   })
   langIds: number[];
 
-  @Expose({ name: 'is_active' })
   @IsOptional()
-  @IsBoolean({ message: 'is_active should be boolean' })
+  @IsBoolean({ message: 'isActive should be boolean' })
   @IsIn([true, false])
   @Transform(({ value }) => {
     if (value == undefined) return undefined;

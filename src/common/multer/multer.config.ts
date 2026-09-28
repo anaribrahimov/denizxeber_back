@@ -17,14 +17,24 @@ const localStoragePath: string = process.env.LOCAL_STORAGE_PATH!;
 //   'video/quicktime': '.mov',
 //   'video/webm': '.webm',
 // };
-const PROFILE_IMAGE_MIME_TO_EXT: Record<string, string> = {
-  'image/jpeg': '.jpg',
-  'image/jpg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
-};
+// const PROFILE_IMAGE_MIME_TO_EXT: Record<string, string> = {
+//   'image/jpeg': '.jpg',
+//   'image/jpg': '.jpg',
+//   'image/png': '.png',
+//   'image/webp': '.webp',
+// };
 
-export const PROFILE_IMAGE_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
+// export const PROFILE_IMAGE_MIME_TYPES = [
+//   'image/jpeg', 
+//   'image/jpg', 
+//   'image/png',
+// ];
+
+const PROFILE_IMAGE_MIME_TYPES: Record<string, string[]> = {
+  'image/jpeg': ['.jpg'], 
+  'image/jpg': ['.jpg'], 
+  'image/png': ['.png'],
+};
 
 export const IMAGE_MIME_TYPES: Record<string, string[]> = {
   'image/jpeg': ['.jpg'], 
@@ -119,14 +129,12 @@ export const profileImageFileFilter = (
   callback: (error: Error | null, acceptFile: boolean) => void,
 ) => {
   const ext = extname(file.originalname);
-  const allowedExtensions = [
-    PROFILE_IMAGE_MIME_TO_EXT['image/jpeg'], 
-    PROFILE_IMAGE_MIME_TO_EXT['image/jpg'],
-    PROFILE_IMAGE_MIME_TO_EXT['image/png'],
-    PROFILE_IMAGE_MIME_TO_EXT['image/webp'],
-  ];
+  
+  const allowedExtensions = 
+    Object.values(PROFILE_IMAGE_MIME_TYPES).flatMap((item) => item);
+
   if (
-    !PROFILE_IMAGE_MIME_TYPES.includes(file.mimetype)
+    !Object.keys(PROFILE_IMAGE_MIME_TYPES).includes(file.mimetype)
     || !allowedExtensions.includes(ext)
   ) {
     return callback(

@@ -6,6 +6,7 @@ import { User } from "./user.entity.js";
 import { UserResponseDTO } from "./dto/user-response.dto.js";
 import { Language } from "../language/language.entity.js";
 import { Upload } from "../upload/upload.entity.js";
+import { createPreviewUrl } from "../common/utils/media.util.js";
 
 export class UserMapper {
 
@@ -17,12 +18,18 @@ export class UserMapper {
     user.role = role;
     user.langIds = dto.langIds;
     user.password = await hashPassword(dto.password);
-    if (upload) user.profileImage = upload;
+    if (upload) {
+      user.profileImage = upload;
+    }
     user.isActive = typeof dto.isActive === 'boolean' ? dto.isActive : true;
     return user;
   }
 
-  static toResponseDTO(user: User, languages: Language[]): UserResponseDTO {
+  static toResponseDTO(
+    user: User, 
+    languages: Language[], 
+    publicUrl: string = 'xyz'
+  ): UserResponseDTO {
     const userLanguages = user.langIds
       .reduce((acc: Language[], langId: number) => {
         const lang: Language | null | undefined = languages.find((item) => item.id === langId);
@@ -40,9 +47,17 @@ export class UserMapper {
     response.languages = userLanguages;
     response.createdAt = user.createdAt;
     response.updatedAt = user.updatedAt ?? null;
-    response.profileImageUrl = user.profileImage
-      ? user.profileImage.filePath
-      : null;
+    response.profileImage =
+      user.profileImage
+        ? {
+          originalUrl: createPreviewUrl(publicUrl, user.profileImage.fileKey),
+          thumbnailUrl: 
+              Array.isArray(user.profileImage.versions) 
+              && user.profileImage.versions.length
+                ? createPreviewUrl(publicUrl, user.profileImage.versions[0].fileKey)
+                : null,
+        }
+        : null;
     return response;
   }
 }

@@ -1,45 +1,12 @@
-import { Exclude, Expose, Type } from "class-transformer";
 import { Role } from "../../roles/role.entity.js";
 import { Language } from "../../language/language.entity.js";
+import { ApiProperty } from "@nestjs/swagger";
+import { PaginatedResult } from "../../common/interfaces/paginated-result.interface.js";
 
-// export class UserResponseDto {
-//   @Expose()
-//   id: number;
-
-//   @Expose()
-//   email: string;
-
-//   @Expose()
-//   firstName: string;
-
-//   @Expose()
-//   lastName: string;
-
-//   // Custom computed property using a getter
-//   @Expose()
-//   get fullName(): string {
-//     return `${this.firstName} ${this.lastName}`;
-//   }
-
-//   @Exclude()
-//   password?: string; // Automatically stripped from responses
-
-//   @Type(() => Role) 
-//   @Expose()
-//   role: Role;
-
-//   @Expose()
-//   langIds: number[];
-
-//   @Expose()
-//   isActive: boolean;
-
-//   @Expose()
-//   createdAt: Date;
-
-//   @Expose()
-//   updatedAt: Date;
-// }
+export class UserProfileImageResult {
+  originalUrl?: string;
+  thumbnailUrl?: string | null;
+}
 
 export class UserResponseDTO {
   id: number;
@@ -51,5 +18,21 @@ export class UserResponseDTO {
   createdAt: Date;
   updatedAt?: Date | null;
   isActive: boolean;
-  profileImageUrl: string | null;
+  profileImage: UserProfileImageResult | null;
+}
+
+export class ControllerUserResponseDto {
+
+  @ApiProperty()
+  data: UserResponseDTO;
+}
+
+export class ControllerUsersResponseDto implements PaginatedResult<UserResponseDTO> {
+  data: UserResponseDTO[];
+  meta: { 
+    total: number; 
+    page: number; 
+    limit: number; 
+    totalPages: number; 
+  };
 }

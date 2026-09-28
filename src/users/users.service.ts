@@ -1,16 +1,13 @@
 import { ForbiddenException, Inject, Injectable, NotFoundException, Search } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { User } from './user.entity.js';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, QueryRunner, Repository } from 'typeorm';
 import { Role } from '../roles/role.entity.js';
 import { ValidationException } from '../common/exceptions/validation.exception.js';
 import { Language } from '../language/language.entity.js';
 import { UserMapper } from './user.mapper.js';
 import { UserResponseDTO } from './dto/user-response.dto.js';
-import { UploadMapper } from '../uploads/uploads.mapper.js';
-import { storageConfig } from '../config/storage.config.js';
-import type { ConfigType } from '@nestjs/config';
-import { Upload } from '../uploads/upload.entity.js';
+import { Upload, UploadType } from '../upload/upload.entity.js';
 import { deleteFile } from '../common/utils/storage.util.js';
 import { UpdateUserDTO } from './dto/update-user.dto.js';
 import { hashPassword } from '../common/utils/auth.util.js';
@@ -19,35 +16,51 @@ import { PaginatedResult } from '../common/interfaces/paginated-result.interface
 import { PaginateUserDto } from './dto/paginate-user.dto.js';
 import { AuthUser } from '../auth/interfaces/auth-user.interface.js';
 import { roles } from '../roles/role.cache.js';
+import { ProcessedFileResult } from '../common/services/media.service.js';
+import { UploadService } from '../upload/upload.service.js';
 
 @Injectable()
 export class UsersService {
 
+  private readonly publicUrl: string;
+
   constructor(
-    @Inject(storageConfig.KEY)
-    private readonly storage: ConfigType<typeof storageConfig>,
+    // @Inject(storageConfig.KEY)
+    // private readonly storage: ConfigType<typeof storageConfig>,
 
     private readonly dataSource: DataSource,
 
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
 
-    @InjectRepository(Role)
-    private readonly roleRepository: Repository<Role>,
+    // @InjectRepository(Role)
+    // private readonly roleRepository: Repository<Role>,
 
     @InjectRepository(Language)
     private readonly languageRepository: Repository<Language>,
-  ) {}
 
-  async create(dto: CreateUserDto, profileImage: Express.Multer.File): Promise<UserResponseDTO> {
+    private readonly uploadService: UploadService,
+  ) {
+    this.publicUrl = this.uploadService.getPublicUrl();
+  }
+
+  async create(
+    dto: CreateUserDto, 
+    profileImage: Express.Multer.File
+  ): Promise<UserResponseDTO> {
     const errors: Record<string, string[]> = {};
 
+    let processedFile: ProcessedFileResult | null = null;
+    
     const queryRunner = this.dataSource.createQueryRunner();
-
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      if (profileImage) {
+        processedFile = await this.uploadService.processFile(profileImage);
+      }
+
       // find user
       const user = await queryRunner.manager.existsBy(User, { email: dto.email });
 
@@ -59,7 +72,9 @@ export class UsersService {
 
       // console.log('role', role);
 
-      if (!role) errors['role_id'] = ['Role not found'];
+      if (!role) {
+        errors['roleId'] = ['Role not found'];
+      }
 
       const languages = await queryRunner.manager.find(Language);
 
@@ -73,17 +88,18 @@ export class UsersService {
           return accumulator;
         }, []);
 
-      if (langErrors.length) errors['lang_ids'] = langErrors;
+      if (langErrors.length) {
+        errors['langIds'] = langErrors;
+      }
 
       if (Object.keys(errors).length) throw new ValidationException(errors);
 
-      let savedUpload: Upload | null = null;
-
-      if (profileImage) {
-        const upload = UploadMapper.toEntity(profileImage, this.storage.localUplodsPath!, true);
-        // save upload to db
-        savedUpload = await queryRunner.manager.save(Upload, upload);
-      }
+      // save profile image
+      const savedUpload: Upload | null = 
+        processedFile 
+          ? await this.uploadService
+              .saveUploadTransactional(processedFile, queryRunner, UploadType.PRIVATE) 
+          : null;
 
       const newUser = await UserMapper.toEntity(dto, role!, savedUpload);
 
@@ -96,10 +112,18 @@ export class UsersService {
 
       await queryRunner.commitTransaction(); // commit transaction
 
-      return UserMapper.toResponseDTO(savedUser, languages);
+      return UserMapper.toResponseDTO(savedUser, languages, this.publicUrl);
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      if (profileImage) await deleteFile(profileImage.path);
+      if (profileImage) {
+        await deleteFile(profileImage.path);
+      }
+      if (processedFile && processedFile?.path) {
+        await deleteFile(processedFile!.path);
+        if (processedFile?.thumbnailPath) {
+          await deleteFile(processedFile.thumbnailPath);
+        }
+      }
       throw err;
     } finally {
       await queryRunner.release();
@@ -111,13 +135,22 @@ export class UsersService {
     dto: UpdateUserDTO, 
     authUser: AuthUser,
     profileImage?: Express.Multer.File,
-  ): Promise<void> {
-    const queryRunner = this.dataSource.createQueryRunner();
+  ): Promise<UserResponseDTO> {
+    if (!profileImage && !Object.values(dto).filter((item) => item !== undefined).length) {
+      throw new ValidationException({}, 'Not any params sent to update');
+    }
 
+    let processedFile: ProcessedFileResult | null = null;
+
+    const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
     try {
+      if (profileImage) {
+        processedFile = await this.uploadService.processFile(profileImage);
+      }
+
       // find the user and lock the row for update
       const user: User | null = await queryRunner.manager.findOne(User, {
         where: {
@@ -129,6 +162,8 @@ export class UsersService {
       });
 
       if (!user) throw new NotFoundException('User not found: ' + id);
+
+      const languages = await queryRunner.manager.find(Language);
 
       if (authUser.userId !== id && user.roleId === roles.Admin.id) {
         // updating admin user not allowed
@@ -165,7 +200,7 @@ export class UsersService {
 
       if (Object.keys(errors).length) throw new ValidationException(errors);
 
-      if (profileImage || dto.removeProfileImage) {
+      if (processedFile || dto.removeProfileImage) {
         if (user.profileImageId) {
           // remove current upload record
           await queryRunner.manager.softDelete(Upload, user.profileImageId);
@@ -173,10 +208,10 @@ export class UsersService {
           user.profileImageId = null;
         }
 
-        if (profileImage) {
-          const upload = UploadMapper.toEntity(profileImage, this.storage.localUplodsPath!, true);
-          // save upload to db
-          const savedUpload = await queryRunner.manager.save(Upload, upload);
+        if (processedFile) {
+          const savedUpload: Upload = 
+            await this.uploadService
+              .saveUploadTransactional(processedFile, queryRunner, UploadType.PRIVATE);
           user.profileImage = savedUpload;
         }
       }
@@ -188,11 +223,32 @@ export class UsersService {
       // save user
       await queryRunner.manager.save(user);
 
+      const updatedUser = await queryRunner.manager.findOne(User, {
+        where: {
+          id,
+        },
+        relations: {
+          role: true,
+          profileImage: {
+            versions: true
+          }
+        }
+      });
+
+      // console.log('updated user', updatedUser);
+
       await queryRunner.commitTransaction(); // commit transaction
 
+      return UserMapper.toResponseDTO(updatedUser!, languages, this.publicUrl);
     } catch (err) {
       await queryRunner.rollbackTransaction();
       if (profileImage) await deleteFile(profileImage.path);
+      if (processedFile && processedFile?.path) {
+        await deleteFile(processedFile!.path);
+        if (processedFile?.thumbnailPath) {
+          await deleteFile(processedFile.thumbnailPath);
+        }
+      }
       throw err;
     } finally {
       await queryRunner.release();
@@ -243,7 +299,12 @@ export class UsersService {
     // find user
     const user = await this.usersRepository
       .findOne({
-        relations: { role: true },
+        relations: { 
+          role: true,
+          profileImage: {
+            versions: true,
+          }
+        },
         where: { id },
       });
 
@@ -251,7 +312,7 @@ export class UsersService {
 
     const languages: Language[] = await this.languageRepository.find();
 
-    return UserMapper.toResponseDTO(user, languages);
+    return UserMapper.toResponseDTO(user, languages, this.publicUrl);
   }
 
   async findPaginated(query: PaginateUserDto): Promise<PaginatedResult<UserResponseDTO>> {
@@ -259,7 +320,9 @@ export class UsersService {
 
     const qb = this.usersRepository
       .createQueryBuilder('users')
-      .leftJoinAndSelect('users.role', 'roles');
+      .leftJoinAndSelect('users.role', 'roles')
+      .leftJoinAndSelect('users.profileImage', 'profileImage')
+      .leftJoinAndSelect('profileImage.versions', 'version');
 
     const languages: Language[] = await this.languageRepository.find();
 
@@ -277,7 +340,7 @@ export class UsersService {
     const [data, total] = await qb.getManyAndCount();
 
     return {
-      data: data.map((item: User) => UserMapper.toResponseDTO(item, languages)),
+      data: data.map((item: User) => UserMapper.toResponseDTO(item, languages, this.publicUrl)),
       meta: {
         total,
         page,
