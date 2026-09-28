@@ -1,4 +1,5 @@
 import { Role } from "../../roles/role.entity.js";
+import { UserProfileImageResult } from "../../users/dto/user-response.dto.js";
 
 export class ValidatedUserDto {
   id: number;
@@ -8,5 +9,5 @@ export class ValidatedUserDto {
   role: Role;
   langIds: number[];
   email: string;
-  profileImage: string | null;
+  profileImage: UserProfileImageResult | null
 };

@@ -14,7 +14,7 @@ import { RefreshToken } from './refresh-token.entity.js';
 import { RefreshTokenService } from './refresh-token.service.js';
 import { RefreshTokenCleanupTask } from './refresh-token-cleanup.task.js';
 import { Category } from '../category/category.entity.js';
-import { AuthMapper } from './auth.mapper.js';
+import { UploadModule } from '../upload/upload.module.js';
 
 @Module({
   imports: [
@@ -30,6 +30,7 @@ import { AuthMapper } from './auth.mapper.js';
         },
       }),
     }),
+    UploadModule,
   ],
   controllers: [AuthController],
   providers: [
@@ -38,7 +39,7 @@ import { AuthMapper } from './auth.mapper.js';
     RefreshTokenCleanupTask,
     LocalStrategy,
     JwtStrategy,
-    AuthMapper,
+    // AuthMapper,
     // Applies JwtAuthGuard to EVERY route in the app by default.
     // Use @Public() on a route to exempt it (register, login, refresh, etc.)
     { provide: APP_GUARD, useClass: JwtAuthGuard },

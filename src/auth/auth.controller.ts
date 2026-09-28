@@ -19,12 +19,11 @@ function meta(req: Request) {
   return { userAgent: req.headers['user-agent'], ipAddress: req.ip };
 }
 
-@Controller('auth')
+@Controller('/auth')
 export class AuthController {
   constructor(
     private authService: AuthService,
     private config: ConfigService,
-    private authMapper: AuthMapper,
   ) {}
 
   // @Public()
@@ -58,7 +57,7 @@ export class AuthController {
       categories,
     } = await this.authService.login(req.user as any, meta(req));
     setRefreshCookie(res, refreshToken, refreshExpiresAt, this.config);
-    return this.authMapper.toLoginResponseDto(accessToken, user, categories);
+    return AuthMapper.toLoginResponseDto(accessToken, user, categories);
   }
 
   @Public()

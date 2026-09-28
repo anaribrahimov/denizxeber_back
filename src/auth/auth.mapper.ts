@@ -1,20 +1,18 @@
-import { Injectable } from "@nestjs/common";
 import { LoginResponseCategoryItem, LoginResponseDto } from "./dto/login-response.dto.js";
 import { User } from "../users/user.entity.js";
 import { ValidatedUserDto } from "./dto/validated-user.dto.js";
 import { Category } from "../category/category.entity.js";
 import { languages } from "../language/language.cache.js";
-import { Language } from "../language/language.entity.js";
+import { statuses } from "../status/status.cache.js";
+import { priorities } from "../priority/priority.cache.js";
+import { createPreviewUrl } from "../common/utils/media.util.js";
 
-@Injectable()
 export class AuthMapper {
 
-  toLoginResponseDto(
+  public static toLoginResponseDto(
     accessToken: string,
     user: ValidatedUserDto,
     categories: Category[],
-    // statuses,
-    // priorities,
   ): LoginResponseDto {
     const response: LoginResponseDto = new LoginResponseDto;
     response.accessToken = accessToken;
@@ -42,15 +40,13 @@ export class AuthMapper {
           return acc;
         }, [])
       : [];
-    response.languages = Array.isArray(user.langIds)
-      ? languages.filter((item: Language) => user.langIds.includes(item.id))
-      : [];
-    // response.statuses = statuses;
-    // response.priorities = priorities;
+    response.languages = languages;
+    response.statuses = statuses;
+    response.priorities = priorities;
     return response;
   }
 
-  toValidatedUserDto(user: User): ValidatedUserDto {
+  public static toValidatedUserDto(user: User, publicUrl: string): ValidatedUserDto {
     const dto = new ValidatedUserDto;
     dto.id = user.id;
     dto.email = user.email;
@@ -58,7 +54,18 @@ export class AuthMapper {
     dto.lastName = user.lastName;
     dto.role = user.role;
     dto.langIds = Array.isArray(user.langIds) ? user.langIds : [];
-    dto.profileImage = null; // todo
+
+    dto.profileImage =
+      user.profileImage 
+        ? {
+            originalUrl: createPreviewUrl(publicUrl, user.profileImage.fileKey),
+            thumbnailUrl: 
+              Array.isArray(user.profileImage.versions) && user.profileImage.versions.length
+                ? createPreviewUrl(publicUrl, user.profileImage.versions[0].fileKey)
+                : null
+          }
+        : null
+
     return dto;
   }
 }

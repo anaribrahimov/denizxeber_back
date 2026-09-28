@@ -11,9 +11,13 @@ import { RefreshTokenService } from './refresh-token.service.js';
 import { Category } from '../category/category.entity.js';
 import { AuthMapper } from './auth.mapper.js';
 import { ValidatedUserDto } from './dto/validated-user.dto.js';
+import { UploadService } from '../upload/upload.service.js';
 
 @Injectable()
 export class AuthService {
+
+  private readonly publicUrl: string;
+
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
@@ -22,8 +26,10 @@ export class AuthService {
     // private usersService: UsersService,
     private jwtService: JwtService,
     private refreshTokenService: RefreshTokenService,
-    private authMapper: AuthMapper,
-  ) {}
+    private readonly uploadService: UploadService,
+  ) {
+    this.publicUrl = this.uploadService.getPublicUrl();
+  }
 
   // async register(dto: RegisterDto, meta: RequestMeta) {
   //   const existing = await this.usersService.findByEmail(dto.email);
@@ -44,6 +50,9 @@ export class AuthService {
       where: { email },
       relations: {
         role: true,
+        profileImage: {
+          versions: true
+        }
       }
     });
 
@@ -58,7 +67,7 @@ export class AuthService {
 
     // console.log('safeuser', safeUser);
 
-    return this.authMapper.toValidatedUserDto(user);
+    return AuthMapper.toValidatedUserDto(user, this.publicUrl);
   }
 
   async login(user: ValidatedUserDto, meta: RequestMeta) {
