@@ -82,7 +82,7 @@ export class AuthService {
       categories = await this.categoryRepository.find({
         where: {
           langId: In(user.langIds),
-          isActive: true
+          // isActive: true
         }
       });
     }

@@ -1,6 +1,7 @@
 import {
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -41,12 +42,23 @@ export class Category {
   })
   updatedAt: Date;
 
-  @Column({
-    name: 'is_active',
-    type: 'boolean',
-    default: true,
+  // @Column({
+  //   name: 'is_active',
+  //   type: 'boolean',
+  //   default: true,
+  // })
+  // isActive: boolean;
+
+  @DeleteDateColumn({
+    name: 'deleted_at',
+    type: 'datetime',
+    nullable: true,
   })
-  isActive: boolean;
+  deletedAt: Date | null;
+
+  /**
+   * Relations
+   */
 
   @ManyToOne(() => Language, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'lang_id' })

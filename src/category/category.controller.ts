@@ -21,15 +21,15 @@ import { LanguageGuard } from "../common/guards/language.guard.js";
 @UseGuards(RolesGuard)
 @UseGuards(LanguageGuard)
 @Roles('Admin', 'User')
-@ApiTags('categories')
+@ApiTags('Categories')
 @ApiResponse({
   status: 401,
-  description: 'Unauthenticated',
+  description: 'Unauthorized',
   type: UnauthenticatedResponseDto,
 })
 @ApiResponse({
   status: 403,
-  description: 'Unauthorized',
+  description: 'Forbidden',
   type: UnauthorizedResponseDto,
 })
 export class CategoryController {

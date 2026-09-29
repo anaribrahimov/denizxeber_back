@@ -34,6 +34,7 @@ export class CategoryService {
         langId: language.id,
         name: dto.name,
       },
+      withDeleted: true
     });
 
     if (existing) {
@@ -135,6 +136,7 @@ export class CategoryService {
             langId: category.langId,
             name: dto.name,
           },
+          withDeleted: true
         });
 
         if (existing && existing.id !== id) {
@@ -154,9 +156,9 @@ export class CategoryService {
         category.slug = slug(dto.name) + `-${Date.now()}`;
       }
 
-      if (typeof dto.isActive === 'boolean') {
-        category.isActive = dto.isActive;
-      }
+      // if (typeof dto.isActive === 'boolean') {
+      //   category.isActive = dto.isActive;
+      // }
 
       await queryRunner.manager.save(category); // save user
 
@@ -182,6 +184,6 @@ export class CategoryService {
 
     // todo: check category has no posts
 
-    await this.categoryRepository.remove(category);
+    await this.categoryRepository.softDelete(id);
   }
 }

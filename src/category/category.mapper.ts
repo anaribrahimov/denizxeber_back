@@ -11,7 +11,7 @@ export class CategoryMapper {
     category.name = dto.name;
     category.slug = slug(dto.name) + `-${Date.now()}`;
     category.userId = userId;
-    category.isActive = typeof dto.isActive === 'boolean' ? dto.isActive : true;
+    // category.isActive = typeof dto.isActive === 'boolean' ? dto.isActive : true;
     return category;
   }
 
@@ -23,7 +23,7 @@ export class CategoryMapper {
     dto.userId = +category.userId;
     dto.createdAt = category.createdAt;
     dto.updatedAt = category.updatedAt;
-    dto.isActive = category.isActive;
+    // dto.isActive = category.isActive;
     return dto;
   }
 }
