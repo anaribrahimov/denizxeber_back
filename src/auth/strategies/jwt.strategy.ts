@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
@@ -32,10 +32,20 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       relations: {
         role: true,
       },
-      select: { id: true, email: true, role: true, langIds: true },
+      select: { 
+        id: true, 
+        email: true, 
+        role: true, 
+        langIds: true,
+        isActive: true,
+      },
     })
 
     if (!user) throw new UnauthorizedException;
+
+    if (!user.isActive) {
+      throw new ForbiddenException();
+    }
 
     // Attached to req.user on every route guarded by JwtAuthGuard
     return { 

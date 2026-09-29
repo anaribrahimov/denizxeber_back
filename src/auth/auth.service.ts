@@ -1,5 +1,5 @@
 // src/auth/auth.service.ts
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { Role } from '../roles/role.entity.js';
@@ -62,6 +62,10 @@ export class AuthService {
 
     const match = await bcrypt.compare(password, user.password);
     if (!match) throw new UnauthorizedException('Invalid credentials');
+
+    if (!user.isActive) {
+      throw new ForbiddenException();
+    }
 
     // const { password: _, ...safeUser } = user;
 
