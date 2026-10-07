@@ -1,9 +1,12 @@
-import { Column, Entity } from "typeorm";
+import { Column, Entity, PrimaryColumn } from "typeorm";
 
 @Entity('statuses')
 export class Status {
 
-  @Column()
+  @PrimaryColumn({
+    type: 'tinyint',
+    unsigned: true,
+  })
   id: number;
 
   @Column()

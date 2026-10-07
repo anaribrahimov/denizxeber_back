@@ -28,7 +28,7 @@ export class UserMapper {
   static toResponseDTO(
     user: User, 
     languages: Language[], 
-    publicUrl: string = 'xyz'
+    publicUrl: string
   ): UserResponseDTO {
     const userLanguages = user.langIds
       .reduce((acc: Language[], langId: number) => {
