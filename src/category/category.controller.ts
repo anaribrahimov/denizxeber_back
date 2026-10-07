@@ -17,7 +17,7 @@ import { CurrentLanguage } from "../common/decorators/current-language.decorator
 import { Language } from "../language/language.entity.js";
 import { LanguageGuard } from "../common/guards/language.guard.js";
 
-@Controller('/:lang/admin/categories')
+@Controller('/:lang/categories')
 @UseGuards(RolesGuard)
 @UseGuards(LanguageGuard)
 @Roles('Admin', 'User')

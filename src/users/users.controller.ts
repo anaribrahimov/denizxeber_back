@@ -16,7 +16,7 @@ import type { AuthUser } from "../auth/interfaces/auth-user.interface.js";
 import { ValidationErrorResponseDto } from "../common/dto/validation-error-response.dto.js";
 import { CommonErrorDto } from "../common/dto/common-error.dto.js";
 
-@Controller('/:lang/admin/users')
+@Controller('/users')
 @UseGuards(RolesGuard)
 @Roles('Admin')
 @ApiTags('Users')

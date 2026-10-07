@@ -8,7 +8,6 @@ import { UploadResponseDto } from "./dto/upload-response.dto.js";
 import { UploadResultDto } from "./dto/upload-result.dto.js";
 import { CommonErrorDto } from "../common/dto/common-error.dto.js";
 import { RolesGuard } from "../auth/guards/roles.guard.js";
-import { LanguageGuard } from "../common/guards/language.guard.js";
 import { Roles } from "../auth/decorators/roles.decorator.js";
 import { UnauthenticatedResponseDto } from "../common/dto/unauthenticated-response.dto.js";
 import { UnauthorizedResponseDto } from "../common/dto/unauthorized-response.dto.js";
@@ -16,9 +15,8 @@ import { PaginateUploadDto } from "./dto/paginate-upload.dto.js";
 import { PaginatedResult } from "../common/interfaces/paginated-result.interface.js";
 import { OpenapiUploadPaginatedResponseDto } from "./dto/openapi/paginated-response.dto.js";
 
-@Controller('/:lang/admin/uploads')
+@Controller('/uploads')
 @UseGuards(RolesGuard)
-@UseGuards(LanguageGuard)
 @Roles('Admin', 'User')
 @ApiTags('Uploads')
 @ApiResponse({
