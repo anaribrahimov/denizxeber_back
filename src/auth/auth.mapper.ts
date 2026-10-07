@@ -4,7 +4,6 @@ import { ValidatedUserDto } from "./dto/validated-user.dto.js";
 import { Category } from "../category/category.entity.js";
 import { languages } from "../language/language.cache.js";
 import { statuses } from "../status/status.cache.js";
-import { priorities } from "../priority/priority.cache.js";
 import { createPreviewUrl } from "../common/utils/media.util.js";
 
 export class AuthMapper {
@@ -42,7 +41,6 @@ export class AuthMapper {
       : [];
     response.languages = languages;
     response.statuses = statuses;
-    response.priorities = priorities;
     return response;
   }
 

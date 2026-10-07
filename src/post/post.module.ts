@@ -5,14 +5,13 @@ import { Category } from "../category/category.entity.js";
 import { PostController } from "./post.controller.js";
 import { PostService } from "./post.service.js";
 import { Upload } from "../upload/upload.entity.js";
-import { Priority } from "../priority/priority.entity.js";
 import { Status } from "../status/status.entity.js";
 import { User } from "../users/user.entity.js";
 
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Post, Category, Upload, Priority, Status, User]),
+    TypeOrmModule.forFeature([Post, Category, Upload, Status, User]),
   ],
   controllers: [PostController],
   providers: [PostService],
