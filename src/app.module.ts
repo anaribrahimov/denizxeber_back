@@ -21,6 +21,7 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter.js';
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './logger/winston.config.js';
 import { CategoryModule } from './category/category.module.js';
+import { PostModule } from './post/post.module.js';
 
 @Module({
   imports: [
@@ -70,6 +71,7 @@ import { CategoryModule } from './category/category.module.js';
     UsersModule,
     AuthModule,
     CategoryModule,
+    PostModule,
   ],
   // controllers: [AppController],
   providers: [

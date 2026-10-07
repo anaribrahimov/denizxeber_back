@@ -23,7 +23,6 @@ export class CreateUploadTable1788591482605 implements MigrationInterface {
     if (!['development', 'dev', 'local'].includes(env)) {
       throw new Error('Migrations can be reverted in development, dev or local environment');
     }
-    await queryRunner.query(`DROP INDEX \`IDX_uploads_file_path\` ON \`uploads\``);
     await queryRunner.query(`DROP TABLE \`uploads\``);
   }
 
