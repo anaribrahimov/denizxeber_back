@@ -14,6 +14,7 @@ import { CategoryResponseDto } from './dto/category-response.dto.js';
 import { languages } from '../language/language.cache.js';
 import { Language } from '../language/language.entity.js';
 import slug from 'slug';
+import { Post } from '../post/post.entity.js';
 
 @Injectable()
 export class CategoryService {
@@ -88,7 +89,7 @@ export class CategoryService {
     if (dto.name && dto.changePostsCategoryId) {
       throw new ValidationException(
         {
-          'change_posts_category_id': [
+          'changePostsCategoryId': [
             'Can not be sent alongside name'
           ],
         }
@@ -123,11 +124,19 @@ export class CategoryService {
 
         if (!toCategory) {
           throw new ValidationException(
-            { 'change_posts_category_id': ['Category not found'] }
+            { 'changePostsCategoryId': ['Category not found'] }
           )
         }
 
-        // todo: change category of the posts of the category
+        // change category of the posts of the category
+        await queryRunner.manager
+          .createQueryBuilder()
+          .update(Post)
+          .set({
+            categoryId: dto.changePostsCategoryId,
+          })
+          .where('categoryId = :id', { id })
+          .execute();
       }
 
       if (dto.name && dto.name !== category.name) {
