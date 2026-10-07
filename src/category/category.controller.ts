@@ -16,6 +16,7 @@ import { CategoriesResponseWrapperDto } from "./dto/categories-response-wrapper.
 import { CurrentLanguage } from "../common/decorators/current-language.decorator.js";
 import { Language } from "../language/language.entity.js";
 import { LanguageGuard } from "../common/guards/language.guard.js";
+import { CommonErrorDto } from "../common/dto/common-error.dto.js";
 
 @Controller('/:lang/categories')
 @UseGuards(RolesGuard)
@@ -95,9 +96,14 @@ export class CategoryController {
   @Delete('/:id')
   @ApiResponse({ status: 204, description: 'Category deleted successfully' })
   @ApiResponse({ 
-    status: 404, 
+    status: HttpStatus.NOT_FOUND, 
     description: 'Category not found or wrong language',
     type: NotFoundResponseDto,
+  })
+  @ApiResponse({ 
+    status: HttpStatus.CONFLICT, 
+    description: 'Conflict to delete',
+    type: CommonErrorDto,
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(
@@ -141,7 +147,7 @@ export class CategoryController {
     type: ValidationErrorResponseDto,
   })
   @ApiResponse({
-    status: 404, 
+    status: HttpStatus.NOT_FOUND, 
     description: 'Wrong language',
     type: NotFoundResponseDto,
   })

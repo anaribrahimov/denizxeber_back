@@ -1,4 +1,6 @@
 import {
+  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,7 +13,6 @@ import { UpdateCategoryDto } from './dto/update-category.dto.js';
 import { ValidationException } from '../common/exceptions/validation.exception.js';
 import { CategoryMapper } from './category.mapper.js';
 import { CategoryResponseDto } from './dto/category-response.dto.js';
-import { languages } from '../language/language.cache.js';
 import { Language } from '../language/language.entity.js';
 import slug from 'slug';
 import { Post } from '../post/post.entity.js';
@@ -22,7 +23,11 @@ export class CategoryService {
   constructor(
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
+
     private readonly dataSource: DataSource,
+    
+    @InjectRepository(Post)
+    private readonly postRepository: Repository<Post>,
   ) { }
 
   async create(
@@ -140,13 +145,14 @@ export class CategoryService {
       }
 
       if (dto.name && dto.name !== category.name) {
-        const existing = await this.categoryRepository.findOne({
-          where: {
-            langId: category.langId,
-            name: dto.name,
-          },
-          withDeleted: true
-        });
+        const existing = await queryRunner.manager
+          .findOne(Category, {
+            where: {
+              langId: category.langId,
+              name: dto.name,
+            },
+            withDeleted: true,
+          });
 
         if (existing && existing.id !== id) {
           throw new ValidationException(
@@ -191,7 +197,15 @@ export class CategoryService {
       throw new NotFoundException('Category not found');
     }
 
-    // todo: check category has no posts
+    const hasPost = await this.postRepository
+      .exists({
+        where: { categoryId: id },
+        withDeleted: true
+      });
+
+    if (hasPost) {
+      throw new ConflictException('Category having posts forbidden to delete');
+    }
 
     await this.categoryRepository.softDelete(id);
   }
