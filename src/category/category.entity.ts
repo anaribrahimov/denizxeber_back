@@ -56,6 +56,9 @@ export class Category {
   })
   deletedAt: Date | null;
 
+  // not a database column
+  postsCount?: number;
+
   /**
    * Relations
    */

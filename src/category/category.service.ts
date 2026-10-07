@@ -1,6 +1,5 @@
 import {
   ConflictException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -25,7 +24,7 @@ export class CategoryService {
     private readonly categoryRepository: Repository<Category>,
 
     private readonly dataSource: DataSource,
-    
+
     @InjectRepository(Post)
     private readonly postRepository: Repository<Post>,
   ) { }
@@ -58,31 +57,60 @@ export class CategoryService {
   }
 
   async findAll(langId: number): Promise<CategoryResponseDto[]> {
-    const categories = await this.categoryRepository.find({
-      where: {
-        langId,
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-      // relations: {
-      //   language: true,
-      // }
+    const { entities, raw } = await this.categoryRepository
+      .createQueryBuilder('category')
+      .leftJoin(
+        Post,
+        'post',
+        'post.category_id = category.id',
+      )
+      .addSelect('COUNT(post.id)', 'postsCount')
+      .where('category.langId = :langId', { langId })
+      .groupBy('category.id')
+      .addGroupBy('category.name')
+      .addGroupBy('category.langId')
+      .orderBy('category.id', 'DESC')
+      .getRawAndEntities();
+
+    const countMap = new Map(
+      raw.map(row => [
+        Number(row.category_id),
+        Number(row.postsCount),
+      ]),
+    );
+
+    entities.forEach(category => {
+      category.postsCount = countMap.get(category.id) ?? 0;
     });
 
-    return categories.map((item: Category) => CategoryMapper.toReponse(item));
+    return entities.map((item) => CategoryMapper.toReponse(item));
   }
 
   async findOne(id: number, langId: number): Promise<CategoryResponseDto> {
-    const category = await this.categoryRepository.findOne({
-      where: { id, langId },
-    });
+    const category = await this.categoryRepository
+      .createQueryBuilder('category')
+      .addSelect(
+        `(SELECT COUNT(p.id)
+          FROM posts p
+          WHERE p.category_id = category.id
+            AND p.deleted_at IS NULL)`,
+        'postsCount',
+      )
+      .where('category.id = :id', { id })
+      .andWhere('category.langId = :langId', { langId })
+      .getRawAndEntities();
 
-    if (!category) {
+    const entity = category.entities[0];
+
+    // console.log('entity', entity);
+
+    if (!entity) {
       throw new NotFoundException('Category not found');
     }
 
-    return CategoryMapper.toReponse(category);
+    entity.postsCount = Number(category.raw[0].postsCount);
+
+    return CategoryMapper.toReponse(entity);
   }
 
   async update(

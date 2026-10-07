@@ -23,6 +23,7 @@ export class CategoryMapper {
     dto.userId = +category.userId;
     dto.createdAt = category.createdAt;
     dto.updatedAt = category.updatedAt;
+    dto.postsCount = category.postsCount;
     // dto.isActive = category.isActive;
     return dto;
   }

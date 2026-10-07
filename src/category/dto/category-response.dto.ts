@@ -19,6 +19,9 @@ export class CategoryResponseDto {
   // language?: Language;
 
   @ApiProperty()
+  postsCount?: number;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
