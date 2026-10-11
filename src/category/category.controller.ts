@@ -84,9 +84,9 @@ export class CategoryController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateCategoryDto,
     @CurrentLanguage() language: Language,
-    // @CurrentUser() authUser: AuthUser,
+    @CurrentUser() authUser: AuthUser,
   ): Promise<CategoryResponseWrapperDto> {
-    const category = await this.categoryService.update(id, dto, language.id);
+    const category = await this.categoryService.update(id, dto, language.id, authUser);
     return {
       message: 'Category successfully updated',
       data: category,

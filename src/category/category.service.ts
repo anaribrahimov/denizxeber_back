@@ -15,6 +15,7 @@ import { CategoryResponseDto } from './dto/category-response.dto.js';
 import { Language } from '../language/language.entity.js';
 import slug from 'slug';
 import { Post } from '../post/post.entity.js';
+import { AuthUser } from '../auth/interfaces/auth-user.interface.js';
 
 @Injectable()
 export class CategoryService {
@@ -116,7 +117,8 @@ export class CategoryService {
   async update(
     id: number,
     dto: UpdateCategoryDto,
-    langId: number
+    langId: number,
+    authUser: AuthUser,
   ): Promise<CategoryResponseDto> {
 
     if (dto.name && dto.changePostsCategoryId) {
@@ -167,6 +169,7 @@ export class CategoryService {
           .update(Post)
           .set({
             categoryId: dto.changePostsCategoryId,
+            lastUpdatedById: authUser.userId,
           })
           .where('categoryId = :id', { id })
           .execute();
