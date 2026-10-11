@@ -173,8 +173,19 @@ export class UsersService {
       const errors: Record<string, string[]> = {};
 
       if (dto.firstName && dto.firstName != user.firstName) user.firstName = dto.firstName;
+      
       if (dto.lastName && dto.lastName != user.lastName) user.lastName = dto.lastName;
-      if (typeof dto.isActive === 'boolean') user.isActive = dto.isActive;
+
+      if (typeof dto.isActive === 'boolean') {
+        if (
+          !dto.isActive 
+          && authUser.userId === user.id 
+          && user.roleId === roles.Admin.id
+        ) {
+          throw new ForbiddenException('You can not deactivate yourself');
+        }
+        user.isActive = dto.isActive;
+      }
 
       if (dto.langIds && dto.langIds.length) {
         // get languages
