@@ -16,28 +16,47 @@ export class AuthMapper {
     const response: LoginResponseDto = new LoginResponseDto;
     response.accessToken = accessToken;
     response.user = user;
-    response.categories = categories.length
-      ? categories.reduce(
-        (acc: LoginResponseCategoryItem[], category: Category) => {
-          const item = acc.find((el) => el.langId === category.langId);
-          const categoryItem = {
-            id: category.id,
-            name: category.name,
-            slug: category.slug,
-          } as Category;
-          if (!item) {
-            const langName = languages.find((lang) => lang.id === category.langId);
-            const x = {
-              langId: category.langId,
-              name: langName!.name,
-              categories: [categoryItem]
-            } as LoginResponseCategoryItem;
-            acc.push(x);
-          } else {
-            item.categories.push(categoryItem);
-          }
-          return acc;
-        }, [])
+    // response.categories = categories.length
+    //   ? categories.reduce(
+    //     (acc: LoginResponseCategoryItem[], category: Category) => {
+    //       const item = acc.find((el) => el.langId === category.langId);
+    //       const categoryItem = {
+    //         id: category.id,
+    //         name: category.name,
+    //         slug: category.slug,
+    //       } as Category;
+    //       if (!item) {
+    //         const langName = languages.find((lang) => lang.id === category.langId);
+    //         const x = {
+    //           langId: category.langId,
+    //           name: langName!.name,
+    //           categories: [categoryItem]
+    //         } as LoginResponseCategoryItem;
+    //         acc.push(x);
+    //       } else {
+    //         item.categories.push(categoryItem);
+    //       }
+    //       return acc;
+    //     }, [])
+    //   : [];
+    response.categories = Array.isArray(user.langIds)
+      ? user.langIds
+          .map((langId: number) => {
+            const lang = languages.find((lang) => lang.id === langId);
+            return {
+              langId,
+              name: lang?.name,
+              categories: categories
+                .filter((item) => item.langId === langId)
+                .map(
+                  (item) => ({
+                    id: item.id,
+                    name: item.name,
+                    slug: item.slug,
+                  } as Category)
+                )
+            } as LoginResponseCategoryItem
+          })
       : [];
     response.languages = languages;
     response.statuses = statuses;
