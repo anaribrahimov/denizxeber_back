@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { PostService } from "./post.service.js";
 import { RolesGuard } from "../auth/guards/roles.guard.js";
 import { Roles } from "../auth/decorators/roles.decorator.js";
@@ -9,7 +9,6 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator.js";
 import type { AuthUser } from "../auth/interfaces/auth-user.interface.js";
 import { CurrentLanguage } from "../common/decorators/current-language.decorator.js";
 import { Language } from "../language/language.entity.js";
-import { LanguageGuard } from "../common/guards/language.guard.js";
 import { ValidationErrorResponseDto } from "../common/dto/validation-error-response.dto.js";
 import { NotFoundResponseDto } from "../common/dto/not-found-response.dto.js";
 import { PostDto } from "./dto/post.dto.js";
@@ -17,13 +16,16 @@ import { PostQueryDto } from "./dto/post-query.dto.js";
 import { PaginatedResult } from "../common/interfaces/paginated-result.interface.js";
 import { UpdatePostDto } from "./dto/update-post.dto.js";
 import { ValidationException } from "../common/exceptions/validation.exception.js";
-import { PostResponseDto } from "./dto/post-response.dto.js";
-import { PostPaginatedResponseDto } from "./dto/post-paginated-response.dto.js";
+import { LanguageQueryGuard } from "../common/guards/language-query.guard.js";
+import { UserHasLanguages } from "../common/guards/user-has-languages.guard.js";
+import { ApiDataResponse } from "../common/decorators/api-data-response.decorator.js";
+import { ApiPaginatedResponse } from "../common/decorators/api-paginated-response.decorator.js";
+import { AppApiResponse } from "../common/interfaces/app-api-response.interface.js";
 
-@Controller('/:lang/posts')
-@UseGuards(LanguageGuard)
+@Controller('/posts')
 @UseGuards(RolesGuard)
 @Roles('Admin', 'User')
+@UseGuards(UserHasLanguages)
 @ApiTags('Posts')
 @ApiResponse({ 
   status: HttpStatus.UNAUTHORIZED, 
@@ -42,11 +44,12 @@ export class PostController {
   ) {}
 
   @Post()
-  @ApiResponse({
-    status: HttpStatus.CREATED,
-    description: 'Post created successfully',
-    type: PostResponseDto
-  })
+  @ApiDataResponse(
+    PostDto,
+    HttpStatus.CREATED,
+    '',
+    '',
+  )
   @ApiResponse({
     status: HttpStatus.BAD_REQUEST,
     description: 'Validation error',
@@ -55,34 +58,31 @@ export class PostController {
   @HttpCode(HttpStatus.CREATED)
   public async createPost(
     @Body() createPostDto: CreatePostDto,
-    @CurrentUser() userPrincipal: AuthUser,
-    @CurrentLanguage() lang: Language
-  ): Promise<PostResponseDto> {
+    @CurrentUser() userPrincipal: AuthUser
+  ): Promise<AppApiResponse<PostDto>> {
     return {
-      data: await this.postService.create(createPostDto, lang, userPrincipal),
+      data: await this.postService.create(createPostDto, userPrincipal),
     };
   }
 
   @Get()
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Paginated posts list',
-    type: PostPaginatedResponseDto,
-  })
+  @UseGuards(LanguageQueryGuard)
+  @ApiPaginatedResponse(PostDto)
   public async findPaginated(
     @Query() queryDto: PostQueryDto,
-    @CurrentLanguage() lang: Language,
+    @CurrentLanguage() currentLang: Language,
     @CurrentUser() userPrincipal: AuthUser
   ): Promise<PaginatedResult<PostDto>> {
-    return this.postService.findPaginated(queryDto, lang.id);
+    return this.postService.findPaginated(queryDto, userPrincipal, currentLang);
   }
 
   @Get('/:id')
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Post found successfully',
-    type: PostResponseDto,
-  })
+  @ApiDataResponse(
+    PostDto,
+    HttpStatus.OK,
+    '',
+    '',
+  )
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'Post not found',
@@ -90,11 +90,10 @@ export class PostController {
   })
   public async findOne(
     @Param('id') id: string,
-    @CurrentLanguage() lang: Language,
     @CurrentUser() userPrincipal: AuthUser
-  ): Promise<PostResponseDto> {
+  ): Promise<AppApiResponse<PostDto>> {
     return {
-      data: await this.postService.findOne(id, lang.id),
+      data: await this.postService.findOne(id, userPrincipal),
     };
   }
 
@@ -111,18 +110,18 @@ export class PostController {
   @HttpCode(HttpStatus.NO_CONTENT)
   public async remove(
     @Param('id') id: string,
-    @CurrentLanguage() lang: Language,
     @CurrentUser() userPrincipal: AuthUser
   ): Promise<void> {
-    await this.postService.remove(id, lang.id, userPrincipal.userId);
+    await this.postService.remove(id, userPrincipal);
   }
 
   @Patch('/:id')
-  @ApiResponse({
-    status: HttpStatus.OK,
-    description: 'Post successfully updated',
-    type: PostResponseDto,
-  })
+  @ApiDataResponse(
+    PostDto,
+    HttpStatus.OK,
+    '',
+    '',
+  )
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
     description: 'Post not found',
@@ -132,12 +131,11 @@ export class PostController {
   public async update(
     @Param('id') id: string,
     @Body() dto: UpdatePostDto,
-    @CurrentLanguage() lang: Language,
-    @CurrentUser() userPrincipal: AuthUser
-  ): Promise<PostResponseDto> {
+    @CurrentUser() userPrincipal: AuthUser,
+  ): Promise<AppApiResponse<PostDto>> {
     if (
       dto.categoryId === undefined
-      && dto.isUpdating === undefined
+      && dto.priorityId === undefined
       && dto.content === undefined
       && dto.coverImageId === undefined
       && dto.statusId === undefined
@@ -146,7 +144,7 @@ export class PostController {
       throw new ValidationException({}, 'Nothing send to update');
     }
     return {
-      data: await this.postService.update(id, dto, lang.id, userPrincipal.userId),
+      data: await this.postService.update(id, dto, userPrincipal),
     }
   }
   

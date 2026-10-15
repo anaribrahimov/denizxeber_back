@@ -9,6 +9,7 @@ import {
   MaxLength 
 } from "class-validator";
 import { StatusEnum } from "../../status/status.cache.js";
+import { prioritiesCached } from "../../priority/priority.cache.js";
 
 export class UpdatePostDto {
 
@@ -16,28 +17,33 @@ export class UpdatePostDto {
   @IsInt()
   categoryId?: number;
 
+  // @IsOptional()
+  // @IsBoolean({ message: 'isUpdating should be boolean' })
+  // @Transform(({ value }) => {
+  //   if (value == undefined) return undefined;
+
+  //   // 2. Handle actual booleans or string variants
+  //   if (
+  //     value === true
+  //     || value === 'true'
+  //     || value === '1' 
+  //     || value === 1) return true;
+
+  //   if (
+  //     value === false
+  //     || value === 'false'
+  //     || value === '0'
+  //     || value === 0) return false;
+
+  //   // 3. Return the original invalid value so @IsBoolean catches it and throws an error
+  //   return value;
+  // })
+  // isUpdating?: boolean;
+
   @IsOptional()
-  @IsBoolean({ message: 'isUpdating should be boolean' })
-  @Transform(({ value }) => {
-    if (value == undefined) return undefined;
-
-    // 2. Handle actual booleans or string variants
-    if (
-      value === true
-      || value === 'true'
-      || value === '1' 
-      || value === 1) return true;
-
-    if (
-      value === false
-      || value === 'false'
-      || value === '0'
-      || value === 0) return false;
-
-    // 3. Return the original invalid value so @IsBoolean catches it and throws an error
-    return value;
-  })
-  isUpdating?: boolean;
+  @IsInt()
+  @IsIn([prioritiesCached.updating.id, prioritiesCached.updated.id])
+  priorityId?: number | null;
 
   @IsOptional()
   @IsInt()

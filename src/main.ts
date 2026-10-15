@@ -26,7 +26,6 @@ async function bootstrap() {
     .setDescription('API documentation for Denizxeber API')
     .setVersion('1.0')
     .addBearerAuth() // if you use JWT auth
-    .addTag('users')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

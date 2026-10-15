@@ -15,6 +15,9 @@ export class PostDto {
   isUpdating: boolean;
 
   @ApiProperty()
+  priority: 'updating' | 'updated' | null;
+
+  @ApiProperty()
   status: string;
 
   @ApiProperty()

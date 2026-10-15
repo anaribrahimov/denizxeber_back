@@ -124,11 +124,20 @@ export class Post {
   })
   sortAt: Date;
 
+  // This column is automatically calculated and stored on disk by the database
   @Column({
     name: 'is_updating',
-    type: 'boolean',
+    generatedType: 'STORED',
+    asExpression: '(priority_id <=> 1)',
   })
   isUpdating: boolean;
+
+  @Column({
+    name: 'priority_id',
+    type: 'tinyint',
+    nullable: true
+  })
+  priorityId: number | null;
 
   /**
    * Relationships

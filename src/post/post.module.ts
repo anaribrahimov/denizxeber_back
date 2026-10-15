@@ -7,13 +7,14 @@ import { PostService } from "./post.service.js";
 import { Upload } from "../upload/upload.entity.js";
 import { Status } from "../status/status.entity.js";
 import { User } from "../users/user.entity.js";
+import { PublicPostController } from "./public/public-post.controller.js";
 
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Post, Category, Upload, Status, User]),
   ],
-  controllers: [PostController],
+  controllers: [PostController, PublicPostController],
   providers: [PostService],
   exports: [PostService],
 })

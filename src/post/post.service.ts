@@ -14,13 +14,21 @@ import { ValidationException } from '../common/exceptions/validation.exception.j
 import { Upload, UploadType } from '../upload/upload.entity.js';
 import { PostMapper } from './post.mapper.js';
 import { ConfigService } from '@nestjs/config';
-import { statuses } from '../status/status.cache.js';
+import { StatusEnum, statuses } from '../status/status.cache.js';
 import { User } from '../users/user.entity.js';
 import { PostDto } from './dto/post.dto.js';
 import { PostQueryDto } from './dto/post-query.dto.js';
 import { createPaginatedResponse } from '../common/utils/pagination.util.js';
 import { PaginatedResult } from '../common/interfaces/paginated-result.interface.js';
 import { UpdatePostDto } from './dto/update-post.dto.js';
+import moment from 'moment';
+import { PublicPostDto } from './public/dto/public-post.dto.js';
+import { PublicPostMapper } from './public/public-post.mapper.js';
+import { PublicPostQueryDto } from './public/dto/public-post-query.dto.js';
+import { prioritiesCached } from '../priority/priority.cache.js';
+import { decodePostCursor, generatePostCursor, PostCursor } from './util/pagination.util.js';
+import { CursorPaginatedResponse } from '../common/interfaces/paginated-response.interface.js';
+import { CursorPaginationMetaDto } from '../common/dto/cursor-pagination-meta.dto.js';
 
 export const COVER_IMAGE_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 
@@ -48,9 +56,16 @@ export class PostService {
       this.configService.getOrThrow<string>('app.filesPublicUrl');
   }
 
+  private async getCoverImages(coverImageIds: string[]): Promise<Upload[]> {
+    return this.uploadRepository
+      .find({
+        where: { id: In(coverImageIds) },
+        relations: { versions: true },
+      });
+  }
+
   async create(
     createPostDto: CreatePostDto,
-    lang: Language,
     userPrincipal: AuthUser
   ): Promise<PostDto> {
     const errors: Record<string, string[]> = {};
@@ -59,7 +74,7 @@ export class PostService {
     const category = await this.categoryRepository.findOne({
       where: {
         id: createPostDto.categoryId,
-        langId: lang.id,
+        langId: In(userPrincipal.langIds)
       },
       relations: {
         language: true,
@@ -76,7 +91,7 @@ export class PostService {
     });
 
     if (!category) {
-      errors.categoryId = ['not found'];
+      errors.categoryId = ['category not found'];
     }
 
     // find cover image
@@ -119,7 +134,7 @@ export class PostService {
     const post = await this.postRepository
       .save(PostMapper.toEntity(createPostDto, userPrincipal.userId));
 
-    post.isUpdating = createPostDto.isUpdating ?? false;
+    // post.isUpdating = createPostDto.isUpdating ?? false;
     post.status = status;
     post.category = category!;
     post.coverImage = coverImage;
@@ -131,10 +146,18 @@ export class PostService {
     return PostMapper.toDto(post, this.filesPublicUrl);
   }
 
-  async findOne(postId: string, langId: number): Promise<PostDto> {
+  async findOne(
+    postId: string, 
+    userPrincipal: AuthUser
+  ): Promise<PostDto> {
     const post = await this.postRepository
       .createQueryBuilder('p')
-      .innerJoin('p.category', 'c', 'c.langId = :langId', { langId })
+      .innerJoin(
+        'p.category', 
+        'c', 
+        'c.langId IN (:...langIds)', 
+        { langIds: userPrincipal.langIds }
+      )
       .leftJoin('p.author', 'a')
       .leftJoin('p.status', 's')
       .leftJoin('p.lastUpdatedBy', 'lu')
@@ -178,13 +201,17 @@ export class PostService {
   async update(
     id: string,
     dto: UpdatePostDto,
-    langId: number,
-    authUserId: number,
+    userPrincipal: AuthUser,
   ): Promise<PostDto> {
     // find post
     const post = await this.postRepository
       .createQueryBuilder('p')
-      .innerJoin('p.category', 'c', 'c.langId = :langId', { langId })
+      .innerJoin(
+        'p.category', 
+        'c', 
+        'c.langId IN (:...langIds)', 
+        { langIds: userPrincipal.langIds }
+      )
       .leftJoin('p.author', 'a')
       .leftJoin('p.status', 's')
       .leftJoin('p.lastUpdatedBy', 'lu')
@@ -210,15 +237,26 @@ export class PostService {
       throw new NotFoundException(`Post not found, id: ${id}`);
     }
 
+    if (
+      dto.categoryId === undefined
+      && dto.priorityId === undefined
+      && dto.content === undefined
+      && dto.coverImageId === undefined
+      && dto.statusId === undefined
+      && dto.title === undefined
+    ) {
+      throw new ValidationException({}, 'Nothing send to update');
+    }
+
     // find post cover image
     post.coverImage = post.coverImageId
       ? await this.uploadRepository
-          .findOne({
-            where: { id: post.coverImageId },
-            relations: {
-              versions: true
-            }
-          })
+        .findOne({
+          where: { id: post.coverImageId },
+          relations: {
+            versions: true
+          }
+        })
       : null;
 
     const errors: Record<string, string[]> = {};
@@ -228,7 +266,7 @@ export class PostService {
         .findOne({
           where: {
             id: dto.categoryId,
-            langId,
+            langId: In(userPrincipal.langIds),
           }
         });
 
@@ -239,6 +277,25 @@ export class PostService {
         post.category = category!;
       }
     }
+
+    if (dto.priorityId !== undefined) {
+      if (!dto.priorityId) {
+        post.priorityId = null;
+      } else {
+        if (dto.priorityId !== post.priorityId) {
+          if (
+            post.priorityId !== prioritiesCached.updating.id 
+            && dto.priorityId === prioritiesCached.updated.id
+          ) {
+            errors['prirityId'] = ['Can not directly change to updated priority'];
+          } else {
+            post.priorityId = dto.priorityId;
+            post.sortAt = new Date(new Date().toISOString());
+          }
+        }
+      }
+    }
+
 
     if (dto.coverImageId !== undefined) {
       if (!dto.coverImageId) {
@@ -255,7 +312,7 @@ export class PostService {
               versions: true
             }
           });
-  
+
         if (!coverImage) {
           errors['coverImageId'] = ['Cover image not found'];
         } else {
@@ -272,7 +329,7 @@ export class PostService {
     // last updater
     const lastUpdatedBy = await this.userRepository
       .findOne({
-        where: { id: authUserId },
+        where: { id: userPrincipal.userId },
         select: {
           id: true,
           email: true,
@@ -280,24 +337,6 @@ export class PostService {
           lastName: true,
         }
       });
-
-    if (
-      dto.categoryId === undefined
-      && dto.isUpdating === undefined
-      && dto.content === undefined
-      && dto.coverImageId === undefined
-      && dto.statusId === undefined
-      && dto.title === undefined
-    ) {
-      throw new ValidationException({}, 'Nothing send to update');
-    }
-
-    if (dto.isUpdating != undefined && dto.isUpdating !== post.isUpdating) {
-      post.isUpdating = dto.isUpdating;
-      if (dto.isUpdating) {
-        post.sortAt = new Date(new Date().toISOString());
-      }
-    }
 
     if (dto.statusId) {
       const status = statuses.find((status) => status.id === dto.statusId);
@@ -313,7 +352,7 @@ export class PostService {
     }
 
     // set post last updated by
-    post.lastUpdatedById = authUserId;
+    post.lastUpdatedById = userPrincipal.userId;
     post.lastUpdatedBy = lastUpdatedBy;
 
     // save post
@@ -324,15 +363,14 @@ export class PostService {
 
   async remove(
     postId: string,
-    langId: number,
-    authUserId: number
+    userPrincipal: AuthUser
   ): Promise<void> {
 
     // find post
     const post = await this.postRepository
       .createQueryBuilder('p')
       .innerJoinAndSelect('p.category', 'c')
-      .where('c.langId = :langId', { langId })
+      .where('c.langId IN (:...langIds)', { langIds: userPrincipal.langIds })
       .andWhere('p.id = :postId', { postId })
       .select(['p.id'])
       .getOne();
@@ -341,7 +379,7 @@ export class PostService {
       throw new NotFoundException(`Post with id "${postId}" not found`);
     }
 
-    post.lastUpdatedById = authUserId;
+    post.lastUpdatedById = userPrincipal.userId;
     post.deletedAt = new Date(new Date().toISOString());
 
     await this.postRepository.save(post);
@@ -349,13 +387,17 @@ export class PostService {
 
   async findPaginated(
     query: PostQueryDto,
-    langId: number,
+    userPrincipal: AuthUser,
+    currentLang: Language,
   ): Promise<PaginatedResult<PostDto>> {
     const { limit, page, categoryId, statusId, title, user } = query;
 
+    // find langids
+    const langIds = currentLang ? [currentLang.id] : userPrincipal.langIds;
+
     const qb = this.postRepository
       .createQueryBuilder('p')
-      .leftJoin('p.category', 'c', 'c.langId = :langId', { langId })
+      .innerJoin('p.category', 'c', 'c.langId IN (:...langIds)', { langIds })
       .leftJoin('p.author', 'a')
       .addSelect([
         'c.id',
@@ -445,12 +487,299 @@ export class PostService {
     return createPaginatedResponse(result, total, page, limit);
   }
 
-  // private isDuplicateSlugError(error: unknown): boolean {
-  //   return (
-  //     typeof error === 'object' &&
-  //     error !== null &&
-  //     'code' in error &&
-  //     error.code === 'ER_DUP_ENTRY'
-  //   );
-  // }
+  public async todaysMostRead(language: Language): Promise<PublicPostDto[]> {
+    const limit = 5;
+    const today = moment().utcOffset(0).format('YYYY-MM-DD');
+
+    const posts = await this.postRepository
+      .createQueryBuilder('p')
+      .innerJoin(
+        'p.category', 
+        'c', 
+        'c.langId = :langId', 
+        { langId: language.id }
+      )
+      .innerJoin('c.language', 'l')
+      .leftJoin('p.author', 'a')
+      .select([
+        'p.id',
+        'p.title',
+        'p.slug',
+        'p.createdAt',
+        'p.updatedAt',
+        'p.isUpdating',
+        'p.sortAt',
+        'p.viewCount',
+        'p.coverImageId',
+        'p.priorityId',
+        'c.id',
+        'c.name',
+        'c.slug',
+        'l.name',
+        'l.id',
+        'a.id',
+        'a.firstName',
+        'a.lastName',
+      ])
+      .where('p.statusId = :statusId', { statusId: StatusEnum.Published })
+      .where('p.createdAt >= :today', { today })
+      .orderBy('p.viewCount', 'DESC')
+      .limit(limit)
+      .getMany();
+
+    const coverImageIds = posts
+      .map((post) => post.coverImageId?.toString())
+      .filter((id): id is string => !!id);
+
+    const coverImages = await this.getCoverImages(coverImageIds);
+
+    const coverImagesMap = new Map(
+      coverImages.map((image) => [image.id, image]),
+    );
+
+    const result: PublicPostDto[] = posts.map((post) => {
+      post.coverImage = post.coverImageId
+        ? coverImagesMap.get(post.coverImageId) as Upload
+        : null;
+
+      return PublicPostMapper.toDto(post, this.filesPublicUrl)
+    });
+
+    return result;
+  }
+
+  public async findBySlugForPublic(
+    postSlug: string,
+  ): Promise<PublicPostDto> {
+    const post = await this.postRepository
+      .createQueryBuilder('p')
+      .innerJoin('p.category', 'c')
+      .innerJoin('c.language', 'l')
+      .leftJoin('p.author', 'a')
+      .select([
+        'p.id',
+        'p.title',
+        'p.slug',
+        'p.createdAt',
+        'p.updatedAt',
+        'p.isUpdating',
+        'p.sortAt',
+        'p.viewCount',
+        'p.coverImageId',
+        'p.content',
+        'p.priorityId',
+        'c.id',
+        'c.name',
+        'c.slug',
+        'l.id',
+        'l.name',
+        'a.id',
+        'a.firstName',
+        'a.lastName',
+      ])
+      .where('p.slug = :postSlug', { postSlug })
+      .andWhere('p.statusId = :statusId', { statusId: StatusEnum.Published })
+      .getOne();
+
+    if (!post) {
+      throw new NotFoundException(`Post with slug "${postSlug}" not found`);
+    }
+
+    // increase post view count
+    post.viewCount++;
+
+    // save post
+    await this.postRepository.save(post);
+
+    // get cover images
+    if (post.coverImageId) {
+      const coverImages = await this.getCoverImages([post.coverImageId.toString()]);
+      const coverImage = coverImages[0];
+      if (coverImage) {
+        post.coverImage = coverImage;
+      }
+    }
+
+    return PublicPostMapper.toDto(post, this.filesPublicUrl);
+  }
+
+  public async getSliderAndOtherPosts(
+    currentLang: Language
+  ): Promise<PublicPostDto[]> {
+    const posts = await this.postRepository
+      .createQueryBuilder('p')
+      .innerJoin('p.category', 'c', 'c.langId = :langId', { langId: currentLang.id })
+      .innerJoin('c.language', 'l')
+      .leftJoin('p.author', 'a')
+      .select([
+        'p.id',
+        'p.title',
+        'p.slug',
+        'p.createdAt',
+        'p.updatedAt',
+        'p.isUpdating',
+        'p.sortAt',
+        'p.viewCount',
+        'p.coverImageId',
+        'p.priorityId',
+        'c.id',
+        'c.name',
+        'c.slug',
+        'l.name',
+        'l.id',
+        'a.id',
+        'a.firstName',
+        'a.lastName',
+      ])
+      .where('p.statusId = :statusId', { statusId: StatusEnum.Published })
+      .orderBy('p.isUpdating', 'DESC')
+      .orderBy('p.sortAt', 'DESC')
+      .limit(7)
+      .getMany();
+
+    const coverImageIds = posts
+      .map((post) => post.coverImageId?.toString())
+      .filter((id): id is string => !!id);
+
+    const coverImages = await this.getCoverImages(coverImageIds);
+
+    const coverImagesMap = new Map(
+      coverImages.map((image) => [image.id, image]),
+    );
+
+    const result: PublicPostDto[] = posts.map((post) => {
+      post.coverImage = post.coverImageId
+        ? coverImagesMap.get(post.coverImageId) as Upload
+        : null;
+
+      return PublicPostMapper.toDto(post, this.filesPublicUrl)
+    });
+
+    return result;
+  }
+
+  public async findPostCursorPaginated(
+    queryDto: PublicPostQueryDto,
+    currentLanguage: Language | null
+  ): Promise<CursorPaginatedResponse<PublicPostDto>> {
+    const take = queryDto.limit + 1;
+
+    const cursor: PostCursor | null = queryDto.afterCursor
+      ? decodePostCursor(queryDto.afterCursor)
+      : null;
+
+    const qb = this.postRepository
+      .createQueryBuilder('p')
+      .leftJoin('p.author', 'a')
+      .select([
+        'p.id',
+        'p.title',
+        'p.slug',
+        'p.createdAt',
+        'p.updatedAt',
+        'p.isUpdating',
+        'p.sortAt',
+        'p.viewCount',
+        'p.coverImageId',
+        'p.priorityId',
+        'c.id',
+        'c.name',
+        'c.slug',
+        'l.name',
+        'l.id',
+        'a.id',
+        'a.firstName',
+        'a.lastName',
+      ]);
+
+    if (currentLanguage?.id) {
+      qb.innerJoin(
+        'p.category', 
+        'c', 
+        'c.langId = :langId', 
+        { langId: currentLanguage.id }
+      );
+    } else {
+      qb.innerJoin('p.category', 'c');
+    }
+
+    qb.innerJoin('c.language', 'l')
+
+    if (queryDto.categoryId) {
+      qb.andWhere('p.categoryId = :categoryId', { categoryId: queryDto.categoryId })
+    }
+
+    qb.andWhere('p.statusId = :statusId', { statusId: StatusEnum.Published });
+
+    if (queryDto.authorId) {
+      qb.andWhere('p.author_id = :authorId', { authorId: queryDto.authorId })
+    }
+
+    if (cursor) {
+      qb.andWhere(
+        `(
+          p.isUpdating < :isUpdating
+          OR (p.isUpdating = :isUpdating AND p.sortAt < :sortAt)
+          OR (p.isUpdating = :isUpdating AND p.sortAt = :sortAt AND p.id < :id)
+        )`,
+        {
+          isUpdating: cursor.isUpdating,
+          sortAt: cursor.sortAt,
+          id: cursor.id,
+        },
+      );
+    }
+
+    qb
+      .orderBy({
+        'p.isUpdating': 'DESC',
+        'p.sort_at': 'DESC',
+        'p.id': 'DESC',
+      })
+      .take(take);
+
+    const [posts, total] = await qb.getManyAndCount();
+
+    const meta: CursorPaginationMetaDto = {
+      total,
+      limit: queryDto.limit,
+      lastCursor: null,
+      hasNextPage: false,
+    }
+
+    if (!posts.length) {
+      return { data: [], meta }
+    }
+
+    if (posts.length > queryDto.limit) {
+      meta.hasNextPage = true;
+      posts.pop(); // remove last record
+    }
+
+    const coverImageIds = posts
+      .map((post) => post.coverImageId?.toString())
+      .filter((id): id is string => !!id);
+
+    const coverImages = await this.getCoverImages(coverImageIds);
+
+    const coverImagesMap = new Map(
+      coverImages.map((image) => [image.id, image]),
+    );
+
+    const result: PublicPostDto[] = posts.map((post) => {
+      post.coverImage = post.coverImageId
+        ? coverImagesMap.get(post.coverImageId) as Upload
+        : null;
+
+      return PublicPostMapper.toDto(post, this.filesPublicUrl)
+    });
+
+    // set meta last cursor
+    meta.lastCursor = result.at(-1)?.cursor ?? null;
+
+    return {
+      data: result,
+      meta,
+    }
+  }
 }

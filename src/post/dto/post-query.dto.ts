@@ -1,5 +1,6 @@
-import { IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
+import { languages } from '../../language/language.cache.js';
 
 export class PostQueryDto {
 
@@ -15,6 +16,11 @@ export class PostQueryDto {
   @Min(1)
   @Max(100)
   limit: number = 1;
+
+  @IsOptional()
+  @IsString()
+  @IsIn(languages.map((item) => item.name))
+  langCode?: string;
 
   @IsOptional()
   @IsString()

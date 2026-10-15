@@ -7,4 +7,7 @@ export class PostCategoryDto {
 
   @ApiProperty()
   name: string;
+
+  @ApiProperty()
+  slug?: string | null;
 }

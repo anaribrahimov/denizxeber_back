@@ -6,6 +6,7 @@ import { PostDto } from "./dto/post.dto.js";
 import { PostCategoryDto } from "./dto/post-category.dto.js";
 import { PostCoverImageDto } from "./dto/post-cover-image.dto.js";
 import { PostUserDto } from "./dto/post-user.dto.js";
+import { prioritiesCached } from "../priority/priority.cache.js";
 
 export class PostMapper {
 
@@ -30,6 +31,15 @@ export class PostMapper {
     postDto.viewCount = post.viewCount;
     postDto.sortAt = post.sortAt;
     postDto.isUpdating = post.isUpdating;
+    
+    if (post.priorityId === prioritiesCached.updating.id) {
+      postDto.priority = prioritiesCached.updating.name as 'updating';
+    } else if (post.priorityId === prioritiesCached.updated.id) {
+      postDto.priority = prioritiesCached.updated.name as 'updated';
+    } else {
+      postDto.priority = null;
+    }
+
     postDto.status = post.status!.name;
 
     if (post.coverImage) {
@@ -71,14 +81,14 @@ export class PostMapper {
   ): Post {
     const post = new Post();
     post.categoryId = createPostDto.categoryId;
-    post.isUpdating = createPostDto.isUpdating ?? false;
+    // post.isUpdating = createPostDto.isUpdating ?? false;
     post.authorId = authorId;
     post.statusId = createPostDto.statusId ?? null;
     post.coverImageId = createPostDto.coverImageId ?? null;
     post.title = createPostDto.title;
     post.slug = `${slug(createPostDto.title)}-${Date.now()}`;
     post.content = createPostDto.content;
-
+    post.priorityId = createPostDto.priorityId ?? null;
     return post;
   }
 }
