@@ -1,7 +1,8 @@
 import { Type } from "class-transformer";
 import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { LangCodeQueryDto } from "../../../common/dto/lang-code-query.dto.js";
 
-export class PublicPostQueryDto {
+export class PublicPostQueryDto extends LangCodeQueryDto {
 
   @IsOptional()
   @IsString()
