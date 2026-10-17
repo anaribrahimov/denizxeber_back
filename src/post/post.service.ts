@@ -29,6 +29,7 @@ import { prioritiesCached } from '../priority/priority.cache.js';
 import { decodePostCursor, generatePostCursor, PostCursor } from './util/pagination.util.js';
 import { CursorPaginatedResponse } from '../common/interfaces/paginated-response.interface.js';
 import { CursorPaginationMetaDto } from '../common/dto/cursor-pagination-meta.dto.js';
+import { CategoryAndSliderPostsResponseDto, CategoryPostItem } from './public/dto/category-slider-posts-response.dto.js';
 
 export const COVER_IMAGE_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 
@@ -147,15 +148,15 @@ export class PostService {
   }
 
   async findOne(
-    postId: string, 
+    postId: string,
     userPrincipal: AuthUser
   ): Promise<PostDto> {
     const post = await this.postRepository
       .createQueryBuilder('p')
       .innerJoin(
-        'p.category', 
-        'c', 
-        'c.langId IN (:...langIds)', 
+        'p.category',
+        'c',
+        'c.langId IN (:...langIds)',
         { langIds: userPrincipal.langIds }
       )
       .leftJoin('p.author', 'a')
@@ -207,9 +208,9 @@ export class PostService {
     const post = await this.postRepository
       .createQueryBuilder('p')
       .innerJoin(
-        'p.category', 
-        'c', 
-        'c.langId IN (:...langIds)', 
+        'p.category',
+        'c',
+        'c.langId IN (:...langIds)',
         { langIds: userPrincipal.langIds }
       )
       .leftJoin('p.author', 'a')
@@ -284,7 +285,7 @@ export class PostService {
       } else {
         if (dto.priorityId !== post.priorityId) {
           if (
-            post.priorityId !== prioritiesCached.updating.id 
+            post.priorityId !== prioritiesCached.updating.id
             && dto.priorityId === prioritiesCached.updated.id
           ) {
             errors['prirityId'] = ['Can not directly change to updated priority'];
@@ -494,9 +495,9 @@ export class PostService {
     const posts = await this.postRepository
       .createQueryBuilder('p')
       .innerJoin(
-        'p.category', 
-        'c', 
-        'c.langId = :langId', 
+        'p.category',
+        'c',
+        'c.langId = :langId',
         { langId: language.id }
       )
       .innerJoin('c.language', 'l')
@@ -603,10 +604,12 @@ export class PostService {
     return PublicPostMapper.toDto(post, this.filesPublicUrl);
   }
 
-  public async getSliderAndOtherPosts(
+  public async getTop3PostsPerCategoryAndSliderPostsAndOtherPosts(
     currentLang: Language
-  ): Promise<PublicPostDto[]> {
-    const posts = await this.postRepository
+  ): Promise<CategoryAndSliderPostsResponseDto> {
+
+    // get posts for slider and other
+    const sliderPosts = await this.postRepository
       .createQueryBuilder('p')
       .innerJoin('p.category', 'c', 'c.langId = :langId', { langId: currentLang.id })
       .innerJoin('c.language', 'l')
@@ -637,9 +640,53 @@ export class PostService {
       .limit(7)
       .getMany();
 
-    const coverImageIds = posts
+    const top3PostsPerCategoryRankedRows = await this.top3postsRowPerCategory(currentLang.id);
+
+    const rankedPostIds = top3PostsPerCategoryRankedRows
+      .map((row) => row.id);
+
+    const top3PostsPerCategory = rankedPostIds.length
+      ? await this.postRepository
+        .createQueryBuilder('p')
+        .innerJoin('p.category', 'c', 'c.langId = :langId', {
+          langId: currentLang.id,
+        })
+        .innerJoin('c.language', 'l')
+        .leftJoin('p.author', 'a')
+        .select([
+          'p.id',
+          'p.title',
+          'p.slug',
+          'p.createdAt',
+          'p.updatedAt',
+          'p.isUpdating',
+          'p.sortAt',
+          'p.viewCount',
+          'p.coverImageId',
+          'p.priorityId',
+          'c.id',
+          'c.name',
+          'c.slug',
+          'l.name',
+          'l.id',
+          'a.id',
+          'a.firstName',
+          'a.lastName',
+        ])
+        .where('p.id IN (:...postIds)', { postIds: rankedPostIds })
+        .andWhere('p.statusId = :statusId', {
+          statusId: StatusEnum.Published,
+        })
+        .addOrderBy('p.isUpdating', 'DESC')
+        .addOrderBy('p.sortAt', 'DESC')
+        .getMany()
+      : [];
+
+    // get cover image ids
+    const coverImageIds = sliderPosts
       .map((post) => post.coverImageId?.toString())
-      .filter((id): id is string => !!id);
+      .concat(top3PostsPerCategory.map((item) => item.coverImageId?.toString()))
+      .filter((id): id is string => !!id)
 
     const coverImages = await this.getCoverImages(coverImageIds);
 
@@ -647,15 +694,86 @@ export class PostService {
       coverImages.map((image) => [image.id, image]),
     );
 
-    const result: PublicPostDto[] = posts.map((post) => {
-      post.coverImage = post.coverImageId
-        ? coverImagesMap.get(post.coverImageId) as Upload
-        : null;
+    return {
+      sliderPosts: sliderPosts
+        .slice(0, 4)
+        .map((post) => {
+          post.coverImage = post.coverImageId
+            ? coverImagesMap.get(post.coverImageId) as Upload
+            : null;
 
-      return PublicPostMapper.toDto(post, this.filesPublicUrl)
-    });
+          return PublicPostMapper.toDto(post, this.filesPublicUrl)
+        }),
+      otherPosts: sliderPosts
+        .slice(4, 7)
+        .map((post) => {
+          post.coverImage = post.coverImageId
+            ? coverImagesMap.get(post.coverImageId) as Upload
+            : null;
 
-    return result;
+          return PublicPostMapper.toDto(post, this.filesPublicUrl)
+        }),
+      top3PostsPerCategory: top3PostsPerCategory
+        .reduce(
+          (acc: CategoryPostItem[], post: Post) => {
+            const el = acc.find((item) => item.categoryId === post.category.id);
+            post.coverImage = post.coverImageId
+              ? coverImagesMap.get(post.coverImageId) as Upload
+              : null;
+            const postDto = PublicPostMapper.toDto(post, this.filesPublicUrl);
+            if (!el) {
+              acc.push({
+                categoryId: post.category.id,
+                posts: [postDto]
+              });
+            } else {
+              el.posts.push(postDto);
+            }
+            return acc;
+          },
+          []
+        )
+    };
+  }
+
+  private async top3postsRowPerCategory(langId: number): Promise<{ id: string, categoryId: number }[]> {
+    const rankedPosts = this.postRepository
+      .createQueryBuilder('p')
+      .innerJoin(
+        'p.category',
+        'c',
+        'c.langId = :langId', {
+        langId,
+      }
+      )
+      .select('p.id', 'id')
+      .addSelect('p.categoryId', 'categoryId')
+      .addSelect('p.sortAt', 'sortAt')
+      .addSelect('p.isUpdating', 'isUpdating')
+      .addSelect(
+        `ROW_NUMBER() OVER (
+          PARTITION BY p.category_id
+          ORDER BY p.isUpdating DESC, p.sortAt DESC, p.id DESC
+        )`,
+        'rn',
+      )
+      .where('p.statusId = :statusId', {
+        statusId: StatusEnum.Published
+      });
+
+    // get top 3 posts row per category
+    return this.postRepository.manager
+      .createQueryBuilder()
+      .select('ranked_posts.id', 'id')
+      .addSelect('ranked_posts.categoryId', 'categoryId')
+      .from(`(${rankedPosts.getQuery()})`, 'ranked_posts')
+      .where('ranked_posts.rn <= :limit', { limit: 3 })
+      .orderBy('ranked_posts.categoryId', 'ASC')
+      .addOrderBy('ranked_posts.isUpdating', 'DESC')
+      .addOrderBy('ranked_posts.sortAt', 'DESC')
+      .addOrderBy('ranked_posts.id', 'DESC')
+      .setParameters(rankedPosts.getParameters())
+      .getRawMany();
   }
 
   public async findPostCursorPaginated(
@@ -694,9 +812,9 @@ export class PostService {
 
     if (currentLanguage?.id) {
       qb.innerJoin(
-        'p.category', 
-        'c', 
-        'c.langId = :langId', 
+        'p.category',
+        'c',
+        'c.langId = :langId',
         { langId: currentLanguage.id }
       );
     } else {

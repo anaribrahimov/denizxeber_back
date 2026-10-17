@@ -13,6 +13,7 @@ import { LanguageQueryGuard } from "../../common/guards/language-query.guard.js"
 import { LangCodeQueryDto } from "../../common/dto/lang-code-query.dto.js";
 import { PublicPostQueryDto } from "./dto/public-post-query.dto.js";
 import { ApiCursorPaginatedResponse } from "../../common/decorators/api-cursor-paginated-response.decorator.js";
+import { CategoryAndSliderPostsResponseDto } from "./dto/category-slider-posts-response.dto.js";
 
 @Controller('/public/posts')
 @ApiTags('Posts')
@@ -53,11 +54,11 @@ export class PublicPostController {
     }
   }
 
-  @Get('/slider-posts')
+  @Get('/top-3-posts-per-category-slider-posts-other-posts')
   @Public()
   @UseGuards(LanguageQueryGuard)
   @ApiDataArrayResponse(
-    PublicPostDto,
+    CategoryAndSliderPostsResponseDto,
     HttpStatus.OK,
     '',
     '',
@@ -69,12 +70,12 @@ export class PublicPostController {
     type: CommonErrorDto
   })
   @HttpCode(HttpStatus.OK)
-  public async getSliderAndOtherPosts(
+  public async getTop3PostsPerCategoryAndSliderPostsAndOtherPosts(
     @Query() dto: LangCodeQueryDto,
     @CurrentLanguage() currentLang: Language,
-  ): Promise<AppApiResponse<PublicPostDto[]>> {
+  ): Promise<AppApiResponse<CategoryAndSliderPostsResponseDto>> {
     return {
-      data: await this.postService.getSliderAndOtherPosts(currentLang),
+      data: await this.postService.getTop3PostsPerCategoryAndSliderPostsAndOtherPosts(currentLang),
     }
   }
 
