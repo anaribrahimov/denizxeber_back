@@ -660,10 +660,53 @@ export class PostService {
       ])
       .where('p.statusId = :statusId', { statusId: StatusEnum.Published })
       .andWhere('p.deletedAt IS NULL')
-      .orderBy('p.isUpdating', 'DESC')
-      .orderBy('p.sortAt', 'DESC')
-      .limit(7)
+      .orderBy({
+        'p.isUpdating': 'DESC',
+        'p.sortAt': 'DESC',
+      })
+      .limit(4)
       .getMany();
+
+    // get other posts not including slider posts
+    const otherPosts = sliderPosts.length === 4
+      ? await this.postRepository
+        .createQueryBuilder('p')
+        .withDeleted()
+        .innerJoin('p.category', 'c', 'c.langId = :langId', { langId: currentLang.id })
+        .innerJoin('c.language', 'l')
+        .leftJoin('p.author', 'a')
+        .select([
+          'p.id',
+          'p.title',
+          'p.slug',
+          'p.createdAt',
+          'p.updatedAt',
+          'p.isUpdating',
+          'p.sortAt',
+          'p.viewCount',
+          'p.coverImageId',
+          'p.priorityId',
+          'c.id',
+          'c.name',
+          'c.slug',
+          'l.name',
+          'l.id',
+          'a.id',
+          'a.firstName',
+          'a.lastName',
+        ])
+        .where('p.id NOT IN (:...ids)', { 
+          ids: sliderPosts.map((item) => item.id) 
+        })
+        .andWhere('p.statusId = :statusId', { statusId: StatusEnum.Published })
+        .andWhere('p.deletedAt IS NULL')
+        .orderBy({
+          'p.isUpdating': 'DESC',
+          'p.sortAt': 'DESC',
+        })
+        .limit(3)
+        .getMany()
+      : [];
 
     const top3PostsPerCategoryRankedRows = await this.top3postsRowPerCategory(currentLang.id);
 
@@ -711,8 +754,9 @@ export class PostService {
 
     // get cover image ids
     const coverImageIds = sliderPosts
+      .concat(otherPosts)
+      .concat(top3PostsPerCategory)
       .map((post) => post.coverImageId?.toString())
-      .concat(top3PostsPerCategory.map((item) => item.coverImageId?.toString()))
       .filter((id): id is string => !!id)
 
     const coverImages = await this.getCoverImages(coverImageIds);
@@ -723,7 +767,6 @@ export class PostService {
 
     return {
       sliderPosts: sliderPosts
-        .slice(0, 4)
         .map((post) => {
           post.coverImage = post.coverImageId
             ? coverImagesMap.get(post.coverImageId) as Upload
@@ -731,8 +774,7 @@ export class PostService {
 
           return PublicPostMapper.toDto(post, this.filesPublicUrl)
         }),
-      otherPosts: sliderPosts
-        .slice(4, 7)
+      otherPosts: otherPosts
         .map((post) => {
           post.coverImage = post.coverImageId
             ? coverImagesMap.get(post.coverImageId) as Upload
