@@ -49,9 +49,9 @@ export class CreatePostDto {
   @IsIn([StatusEnum.Draft, StatusEnum.Published])
   statusId: number;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsInt()
-  coverImageId?: number | null;
+  coverImageId: number;
 
   @Transform(({ value }) => typeof value === 'string' ? value?.trim() : value)
   @IsNotEmpty()

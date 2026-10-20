@@ -26,7 +26,7 @@ import { PublicPostDto } from './public/dto/public-post.dto.js';
 import { PublicPostMapper } from './public/public-post.mapper.js';
 import { PublicPostQueryDto } from './public/dto/public-post-query.dto.js';
 import { prioritiesCached } from '../priority/priority.cache.js';
-import { decodePostCursor, generatePostCursor, PostCursor } from './util/pagination.util.js';
+import { decodePostCursor, PostCursor } from './util/pagination.util.js';
 import { CursorPaginatedResponse } from '../common/interfaces/paginated-response.interface.js';
 import { CursorPaginationMetaDto } from '../common/dto/cursor-pagination-meta.dto.js';
 import { CategoryAndSliderPostsResponseDto, CategoryPostItem } from './public/dto/category-slider-posts-response.dto.js';
@@ -96,30 +96,26 @@ export class PostService {
     }
 
     // find cover image
-    let coverImage: Upload | null | undefined = null;
+    const coverImage = 
+      await this.uploadRepository.findOne({
+        where: {
+          id: createPostDto.coverImageId,
+          type: UploadType.PUBLIC,
+        },
+        relations: {
+          versions: true,
+        }
+      });
 
-    if (createPostDto.coverImageId) {
-      coverImage =
-        await this.uploadRepository.findOne({
-          where: {
-            id: createPostDto.coverImageId,
-            type: UploadType.PUBLIC,
-          },
-          relations: {
-            versions: true,
-          }
-        });
+    if (!coverImage) {
+      errors.coverImageId = ['not found'];
+    }
 
-      if (!coverImage) {
-        errors.coverImageId = ['not found'];
-      }
-
-      if (coverImage && !COVER_IMAGE_MIME_TYPES.includes(coverImage.fileMimeType)) {
-        errors.coverImageId = [
-          'invalid file type. '
-          + `Allowed types: ${COVER_IMAGE_MIME_TYPES.join(', ')}`
-        ];
-      }
+    if (coverImage && !COVER_IMAGE_MIME_TYPES.includes(coverImage.fileMimeType)) {
+      errors.coverImageId = [
+        'invalid file type. '
+        + `Allowed types: ${COVER_IMAGE_MIME_TYPES.join(', ')}`
+      ];
     }
 
     if (Object.keys(errors).length > 0) {
@@ -299,7 +295,7 @@ export class PostService {
 
 
     if (dto.coverImageId !== undefined) {
-      if (!dto.coverImageId) {
+      if (dto.coverImageId === null) {
         post.coverImageId = null;
         post.coverImage = null;
       } else {
@@ -308,6 +304,7 @@ export class PostService {
           .findOne({
             where: {
               id: dto.coverImageId,
+              type: UploadType.PUBLIC,
             },
             relations: {
               versions: true
