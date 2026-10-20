@@ -319,8 +319,15 @@ export class PostService {
         if (!coverImage) {
           errors['coverImageId'] = ['Cover image not found'];
         } else {
-          post.coverImageId = dto.coverImageId;
-          post.coverImage = coverImage;
+          if (!COVER_IMAGE_MIME_TYPES.includes(coverImage.fileMimeType)) {
+            errors.coverImageId = [
+              'invalid file type. '
+              + `Allowed types: ${COVER_IMAGE_MIME_TYPES.join(', ')}`
+            ];
+          } else {
+            post.coverImageId = dto.coverImageId;
+            post.coverImage = coverImage;
+          }
         }
       }
     }
