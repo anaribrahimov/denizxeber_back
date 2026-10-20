@@ -747,8 +747,10 @@ export class PostService {
           statusId: StatusEnum.Published,
         })
         .andWhere('p.deletedAt IS NULL')
-        .addOrderBy('p.isUpdating', 'DESC')
-        .addOrderBy('p.sortAt', 'DESC')
+        .orderBy({
+          'p.isUpdating': 'DESC',
+          'p.sortAt': 'DESC',
+        })
         .getMany()
       : [];
 
