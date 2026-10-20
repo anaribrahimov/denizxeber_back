@@ -833,6 +833,10 @@ export class PostService {
       qb.andWhere('p.author_id = :authorId', { authorId: queryDto.authorId })
     }
 
+    if (queryDto.title) {
+      qb.andWhere('p.title LIKE :title', { title: `%${queryDto.title}%` })
+    }
+
     if (cursor) {
       qb.andWhere(
         `(

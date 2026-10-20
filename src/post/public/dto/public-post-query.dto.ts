@@ -1,5 +1,5 @@
-import { Type } from "class-transformer";
-import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from "class-validator";
+import { Transform, Type } from "class-transformer";
+import { IsInt, IsOptional, IsString, Max, MaxLength, Min, MinLength } from "class-validator";
 import { LangCodeQueryDto } from "../../../common/dto/lang-code-query.dto.js";
 
 export class PublicPostQueryDto extends LangCodeQueryDto {
@@ -31,9 +31,14 @@ export class PublicPostQueryDto extends LangCodeQueryDto {
   // @IsInt()
   // isUpdating?: number | null;
 
-  // @IsOptional()
-  // @IsString()
-  // title?: string | null;
+  @Transform(({ value }) => {
+    if (!value?.trim()) return null;
+    return value.trim();
+  })
+  @IsOptional()
+  @IsString()
+  @MinLength(3)
+  title?: string | null;
 
   // @IsOptional()
   // @IsString()
