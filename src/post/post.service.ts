@@ -149,6 +149,7 @@ export class PostService {
   ): Promise<PostDto> {
     const post = await this.postRepository
       .createQueryBuilder('p')
+      .withDeleted()
       .innerJoin(
         'p.category',
         'c',
@@ -174,6 +175,7 @@ export class PostService {
         'lu.lastName',
       ])
       .andWhere('p.id = :postId', { postId })
+      .andWhere('p.deletedAt IS NULL')
       .getOne();
 
     if (!post) {
@@ -203,6 +205,7 @@ export class PostService {
     // find post
     const post = await this.postRepository
       .createQueryBuilder('p')
+      .withDeleted()
       .innerJoin(
         'p.category',
         'c',
@@ -229,6 +232,7 @@ export class PostService {
         'lu.lastName',
       ])
       .andWhere('p.id = :id', { id })
+      .andWhere('p.deletedAt IS NULL')
       .getOne();
 
     if (!post) {
@@ -396,6 +400,7 @@ export class PostService {
 
     const qb = this.postRepository
       .createQueryBuilder('p')
+      .withDeleted()
       .innerJoin('p.category', 'c', 'c.langId IN (:...langIds)', { langIds })
       .leftJoin('p.author', 'a')
       .addSelect([
@@ -436,6 +441,7 @@ export class PostService {
     }
 
     qb
+      .andWhere('p.deletedAt IS NULL')
       .orderBy({
         'p.isUpdating': 'DESC',
         'p.sort_at': 'DESC'
@@ -492,6 +498,7 @@ export class PostService {
 
     const posts = await this.postRepository
       .createQueryBuilder('p')
+      .withDeleted()
       .innerJoin(
         'p.category',
         'c',
@@ -521,7 +528,8 @@ export class PostService {
         'a.lastName',
       ])
       .where('p.statusId = :statusId', { statusId: StatusEnum.Published })
-      .where('p.createdAt >= :today', { today })
+      .andWhere('p.createdAt >= :today', { today })
+      .andWhere('p.deletedAt IS NULL')
       .orderBy('p.viewCount', 'DESC')
       .limit(limit)
       .getMany();
@@ -552,6 +560,7 @@ export class PostService {
   ): Promise<PublicPostDto> {
     const post = await this.postRepository
       .createQueryBuilder('p')
+      .withDeleted()
       .innerJoin('p.category', 'c')
       .innerJoin('c.language', 'l')
       .leftJoin('p.author', 'a')
@@ -578,6 +587,7 @@ export class PostService {
       ])
       .where('p.slug = :postSlug', { postSlug })
       .andWhere('p.statusId = :statusId', { statusId: StatusEnum.Published })
+      .andWhere('p.deletedAt IS NULL')
       .getOne();
 
     if (!post) {
@@ -609,6 +619,7 @@ export class PostService {
     // get posts for slider and other
     const sliderPosts = await this.postRepository
       .createQueryBuilder('p')
+      .withDeleted()
       .innerJoin('p.category', 'c', 'c.langId = :langId', { langId: currentLang.id })
       .innerJoin('c.language', 'l')
       .leftJoin('p.author', 'a')
@@ -633,6 +644,7 @@ export class PostService {
         'a.lastName',
       ])
       .where('p.statusId = :statusId', { statusId: StatusEnum.Published })
+      .andWhere('p.deletedAt IS NULL')
       .orderBy('p.isUpdating', 'DESC')
       .orderBy('p.sortAt', 'DESC')
       .limit(7)
@@ -646,6 +658,7 @@ export class PostService {
     const top3PostsPerCategory = rankedPostIds.length
       ? await this.postRepository
         .createQueryBuilder('p')
+        .withDeleted()
         .innerJoin('p.category', 'c', 'c.langId = :langId', {
           langId: currentLang.id,
         })
@@ -675,6 +688,7 @@ export class PostService {
         .andWhere('p.statusId = :statusId', {
           statusId: StatusEnum.Published,
         })
+        .andWhere('p.deletedAt IS NULL')
         .addOrderBy('p.isUpdating', 'DESC')
         .addOrderBy('p.sortAt', 'DESC')
         .getMany()
@@ -737,6 +751,7 @@ export class PostService {
   private async top3postsRowPerCategory(langId: number): Promise<{ id: string, categoryId: number }[]> {
     const rankedPosts = this.postRepository
       .createQueryBuilder('p')
+      .withDeleted()
       .innerJoin(
         'p.category',
         'c',
@@ -757,7 +772,8 @@ export class PostService {
       )
       .where('p.statusId = :statusId', {
         statusId: StatusEnum.Published
-      });
+      })
+      .andWhere('p.deletedAt IS NULL');
 
     // get top 3 posts row per category
     return this.postRepository.manager
@@ -786,6 +802,7 @@ export class PostService {
 
     const qb = this.postRepository
       .createQueryBuilder('p')
+      .withDeleted()
       .leftJoin('p.author', 'a')
       .select([
         'p.id',
@@ -851,6 +868,7 @@ export class PostService {
     }
 
     qb
+      .andWhere('p.deletedAt IS NULL')
       .orderBy({
         'p.isUpdating': 'DESC',
         'p.sort_at': 'DESC',
