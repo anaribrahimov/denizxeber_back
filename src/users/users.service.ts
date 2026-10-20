@@ -1,7 +1,7 @@
 import { ForbiddenException, Inject, Injectable, NotFoundException, Search } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { User } from './user.entity.js';
-import { DataSource, QueryRunner, Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Role } from '../roles/role.entity.js';
 import { ValidationException } from '../common/exceptions/validation.exception.js';
 import { Language } from '../language/language.entity.js';
@@ -62,11 +62,18 @@ export class UsersService {
       }
 
       // find user
-      const user = await queryRunner.manager.existsBy(User, { email: dto.email });
+      const user = await queryRunner.manager
+        .exists(
+          User,
+          {
+            where: { email: dto.email },
+            withDeleted: true
+          }
+        )
 
-      // console.log(user);
-
-      if (user) errors['email'] = ['Email is already in use'];
+      if (user) {
+        errors['email'] = ['Email is already in use'];
+      }
 
       const role = await queryRunner.manager.findOneBy(Role, { id: dto.roleId });
 
@@ -173,8 +180,19 @@ export class UsersService {
       const errors: Record<string, string[]> = {};
 
       if (dto.firstName && dto.firstName != user.firstName) user.firstName = dto.firstName;
+      
       if (dto.lastName && dto.lastName != user.lastName) user.lastName = dto.lastName;
-      if (typeof dto.isActive === 'boolean') user.isActive = dto.isActive;
+
+      if (typeof dto.isActive === 'boolean') {
+        if (
+          !dto.isActive 
+          && authUser.userId === user.id 
+          && user.roleId === roles.Admin.id
+        ) {
+          throw new ForbiddenException('You can not deactivate yourself');
+        }
+        user.isActive = dto.isActive;
+      }
 
       if (dto.langIds && dto.langIds.length) {
         // get languages

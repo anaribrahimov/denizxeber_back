@@ -4,5 +4,6 @@ export interface AuthUser {
   userId: number,
   email: string,
   role: Role,
-  langIds?: number[]
+  langIds: number[],
+  langCodes: string[],
 };

@@ -1,4 +1,5 @@
 import {
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -11,9 +12,10 @@ import { UpdateCategoryDto } from './dto/update-category.dto.js';
 import { ValidationException } from '../common/exceptions/validation.exception.js';
 import { CategoryMapper } from './category.mapper.js';
 import { CategoryResponseDto } from './dto/category-response.dto.js';
-import { languages } from '../language/language.cache.js';
 import { Language } from '../language/language.entity.js';
 import slug from 'slug';
+import { Post } from '../post/post.entity.js';
+import { AuthUser } from '../auth/interfaces/auth-user.interface.js';
 
 @Injectable()
 export class CategoryService {
@@ -21,7 +23,11 @@ export class CategoryService {
   constructor(
     @InjectRepository(Category)
     private readonly categoryRepository: Repository<Category>,
+
     private readonly dataSource: DataSource,
+
+    @InjectRepository(Post)
+    private readonly postRepository: Repository<Post>,
   ) { }
 
   async create(
@@ -34,6 +40,7 @@ export class CategoryService {
         langId: language.id,
         name: dto.name,
       },
+      withDeleted: true
     });
 
     if (existing) {
@@ -51,43 +58,73 @@ export class CategoryService {
   }
 
   async findAll(langId: number): Promise<CategoryResponseDto[]> {
-    const categories = await this.categoryRepository.find({
-      where: {
-        langId,
-      },
-      order: {
-        createdAt: 'DESC',
-      },
-      // relations: {
-      //   language: true,
-      // }
+    const { entities, raw } = await this.categoryRepository
+      .createQueryBuilder('category')
+      .leftJoin(
+        Post,
+        'post',
+        'post.category_id = category.id',
+      )
+      .addSelect('COUNT(post.id)', 'postsCount')
+      .where('category.langId = :langId', { langId })
+      .groupBy('category.id')
+      .addGroupBy('category.name')
+      .addGroupBy('category.langId')
+      .orderBy('category.id', 'DESC')
+      .getRawAndEntities();
+
+    const countMap = new Map(
+      raw.map(row => [
+        Number(row.category_id),
+        Number(row.postsCount),
+      ]),
+    );
+
+    entities.forEach(category => {
+      category.postsCount = countMap.get(category.id) ?? 0;
     });
 
-    return categories.map((item: Category) => CategoryMapper.toReponse(item));
+    return entities.map((item) => CategoryMapper.toReponse(item));
   }
 
   async findOne(id: number, langId: number): Promise<CategoryResponseDto> {
-    const category = await this.categoryRepository.findOne({
-      where: { id, langId },
-    });
+    const category = await this.categoryRepository
+      .createQueryBuilder('category')
+      .addSelect(
+        `(SELECT COUNT(p.id)
+          FROM posts p
+          WHERE p.category_id = category.id
+            AND p.deleted_at IS NULL)`,
+        'postsCount',
+      )
+      .where('category.id = :id', { id })
+      .andWhere('category.langId = :langId', { langId })
+      .getRawAndEntities();
 
-    if (!category) {
+    const entity = category.entities[0];
+
+    // console.log('entity', entity);
+
+    if (!entity) {
       throw new NotFoundException('Category not found');
     }
 
-    return CategoryMapper.toReponse(category);
+    entity.postsCount = Number(category.raw[0].postsCount);
+
+    return CategoryMapper.toReponse(entity);
   }
 
   async update(
     id: number,
     dto: UpdateCategoryDto,
-    langId: number
+    langId: number,
+    authUser: AuthUser,
   ): Promise<CategoryResponseDto> {
 
     if (dto.name && dto.changePostsCategoryId) {
       throw new ValidationException(
         {
-          'change_posts_category_id': [
+          'changePostsCategoryId': [
             'Can not be sent alongside name'
           ],
         }
@@ -122,20 +159,31 @@ export class CategoryService {
 
         if (!toCategory) {
           throw new ValidationException(
-            { 'change_posts_category_id': ['Category not found'] }
+            { 'changePostsCategoryId': ['Category not found'] }
           )
         }
 
-        // todo: change category of the posts of the category
+        // change category of the posts of the category
+        await queryRunner.manager
+          .createQueryBuilder()
+          .update(Post)
+          .set({
+            categoryId: dto.changePostsCategoryId,
+            lastUpdatedById: authUser.userId,
+          })
+          .where('categoryId = :id', { id })
+          .execute();
       }
 
       if (dto.name && dto.name !== category.name) {
-        const existing = await this.categoryRepository.findOne({
-          where: {
-            langId: category.langId,
-            name: dto.name,
-          },
-        });
+        const existing = await queryRunner.manager
+          .findOne(Category, {
+            where: {
+              langId: category.langId,
+              name: dto.name,
+            },
+            withDeleted: true,
+          });
 
         if (existing && existing.id !== id) {
           throw new ValidationException(
@@ -154,9 +202,9 @@ export class CategoryService {
         category.slug = slug(dto.name) + `-${Date.now()}`;
       }
 
-      if (typeof dto.isActive === 'boolean') {
-        category.isActive = dto.isActive;
-      }
+      // if (typeof dto.isActive === 'boolean') {
+      //   category.isActive = dto.isActive;
+      // }
 
       await queryRunner.manager.save(category); // save user
 
@@ -180,8 +228,16 @@ export class CategoryService {
       throw new NotFoundException('Category not found');
     }
 
-    // todo: check category has no posts
+    const hasPost = await this.postRepository
+      .exists({
+        where: { categoryId: id },
+        withDeleted: true
+      });
 
-    await this.categoryRepository.remove(category);
+    if (hasPost) {
+      throw new ConflictException('Category having posts forbidden to delete');
+    }
+
+    await this.categoryRepository.softDelete(id);
   }
 }

@@ -44,7 +44,6 @@ export class UploadMapper {
     upload.type = type;
     upload.fileName = fileName;
     upload.fileOriginalName = fileOriginalName;
-    upload.filePath = fileKey;
     upload.fileKey = fileKey;
     upload.fileMimeType = fileMimeType;
     upload.fileSizeByte = fileSizeByte;

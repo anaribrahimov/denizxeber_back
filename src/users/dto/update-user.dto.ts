@@ -74,16 +74,26 @@ export class UpdateUserDTO {
   roleId?: number;
 
   @ValidateIf((o, value) => value !== undefined)
-  @IsArray()
-  // @IsNumber({}, { each: true }) // Ensures every transformed element is a number
-  @IsIn([1, 2, 3, 4, 5, 6], { message: 'Each element can be either 1, 2, 3, 4, 5, 6', each: true })
-  @ArrayNotEmpty({ message: 'should not be empty' })
   @Transform(({ value }) => {
-    if (value === undefined) return undefined;
-    if (!Array.isArray(value)) return value;
-    // 3. Map to numbers and strip duplicates, ignoring null/undefined elements inside the array
-    const cleanedNumbers = value.map(Number);
-    return Array.from(new Set(cleanedNumbers));
+    if (value === undefined || value === null || value === '') {
+      return value;
+    }
+
+    const values = Array.isArray(value)
+      ? value
+      : typeof value === 'string'
+        ? value.split(',')
+        : [value];
+
+    const cleanedNumbers = values.map(Number);
+
+    return [...new Set(cleanedNumbers)];
+  })
+  @IsArray()
+  @ArrayNotEmpty({ message: 'langIds should not be empty' })
+  @IsIn([1, 2, 3, 4, 5, 6], {
+    message: 'Each langId can be either 1, 2, 3, 4, 5, 6',
+    each: true,
   })
   langIds?: number[];
 

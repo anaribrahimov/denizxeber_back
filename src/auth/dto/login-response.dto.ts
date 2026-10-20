@@ -1,5 +1,4 @@
 // import { ApiProperty } from "@nestjs/swagger";
-import { Priority } from "../../priority/priority.entity.js";
 import { Status } from "../../status/status.entity.js";
 import { ValidatedUserDto } from "./validated-user.dto.js";
 
@@ -36,6 +35,4 @@ export class LoginResponseDto {
   languages: Language[];
 
   statuses: Status[];
-
-  priorities: Priority[];
 }

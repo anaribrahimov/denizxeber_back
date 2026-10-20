@@ -50,14 +50,6 @@ export class Upload {
   fileName: string;
 
   @Column({
-    name: 'file_path',
-    type: 'varchar',
-    length: 500,
-  })
-  @Unique('IDX_uploads_file_path', ['file_path'])
-  filePath: string;
-
-  @Column({
     name: 'file_key',
     type: 'varchar',
     length: 255,

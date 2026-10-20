@@ -12,7 +12,7 @@ import {
   MaxLength,
   MinLength
 } from 'class-validator';
-import { Expose, Transform } from 'class-transformer';
+import { Transform } from 'class-transformer';
 // import { IsMatch } from '../../common/validators/is-match.validator.js';
 
 export class CreateUserDto {
@@ -92,15 +92,26 @@ export class CreateUserDto {
   @IsIn([1, 2], { message: 'roleId must be either 1 or 2' })
   roleId: number;
 
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') {
+      return value;
+    }
+
+    const values = Array.isArray(value)
+      ? value
+      : typeof value === 'string'
+        ? value.split(',')
+        : [value];
+
+    const cleanedNumbers = values.map(Number);
+
+    return [...new Set(cleanedNumbers)];
+  })
   @IsArray()
   @ArrayNotEmpty({ message: 'langIds should not be empty' })
-  @IsIn([1, 2, 3, 4, 5, 6], { message: 'Each langId can be either 1, 2, 3, 4, 5, 6', each: true })
-  @Transform(({ value }) => {
-    if (value === undefined) return undefined;
-    if (!Array.isArray(value)) return value;
-    // 3. Map to numbers and strip duplicates, ignoring null/undefined elements inside the array
-    const cleanedNumbers = value.map(Number);
-    return Array.from(new Set(cleanedNumbers));
+  @IsIn([1, 2, 3, 4, 5, 6], {
+    message: 'Each langId can be either 1, 2, 3, 4, 5, 6',
+    each: true,
   })
   langIds: number[];
 

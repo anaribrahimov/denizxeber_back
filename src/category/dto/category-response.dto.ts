@@ -19,11 +19,14 @@ export class CategoryResponseDto {
   // language?: Language;
 
   @ApiProperty()
+  postsCount?: number;
+
+  @ApiProperty()
   createdAt: Date;
 
   @ApiProperty()
   updatedAt?: Date;
 
-  @ApiProperty()
-  isActive: boolean;
+  // @ApiProperty()
+  // isActive: boolean;
 }

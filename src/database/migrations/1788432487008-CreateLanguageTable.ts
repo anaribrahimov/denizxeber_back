@@ -15,12 +15,12 @@ export class CreateLanguageTable1788432487008 implements MigrationInterface {
 
     await queryRunner.query(
       `INSERT INTO \`languages\` (\`id\`, \`name\`) VALUES
-        (1, 'AZ'),
-        (2, 'EN'),
-        (3, 'RU'),
-        (4, 'TR'),
-        (5, 'KZ'),
-        (6, 'TM')`
+        (1, 'az'),
+        (2, 'en'),
+        (3, 'ru'),
+        (4, 'tr'),
+        (5, 'kz'),
+        (6, 'tm')`
     );
   }
 

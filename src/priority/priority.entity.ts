@@ -1,11 +1,16 @@
-import { Column, Entity } from "typeorm";
+import { Column, Entity, PrimaryColumn } from "typeorm";
 
 @Entity('priorities')
 export class Priority {
 
-  @Column()
+  @PrimaryColumn()
   id: number;
 
-  @Column()
+  @Column({
+    type: 'varchar',
+    length: 45,
+    nullable: false,
+    unique: true
+  })
   name: string;
 }

@@ -207,7 +207,13 @@ export class UploadService {
   }
 
   async delete(id: number): Promise<void> {
-    const upload = await this.uploadRepository.existsBy({ id });
+    const upload = await this.uploadRepository
+      .exists({
+        where: {
+          id,
+          type: UploadType.PUBLIC,
+        }
+      });
     if (!upload) {
       throw new NotFoundException('Upload not found');
     }

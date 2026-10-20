@@ -16,20 +16,21 @@ import { CategoriesResponseWrapperDto } from "./dto/categories-response-wrapper.
 import { CurrentLanguage } from "../common/decorators/current-language.decorator.js";
 import { Language } from "../language/language.entity.js";
 import { LanguageGuard } from "../common/guards/language.guard.js";
+import { CommonErrorDto } from "../common/dto/common-error.dto.js";
 
-@Controller('/:lang/admin/categories')
+@Controller('/:lang/categories')
 @UseGuards(RolesGuard)
 @UseGuards(LanguageGuard)
 @Roles('Admin', 'User')
-@ApiTags('categories')
+@ApiTags('Categories')
 @ApiResponse({
   status: 401,
-  description: 'Unauthenticated',
+  description: 'Unauthorized',
   type: UnauthenticatedResponseDto,
 })
 @ApiResponse({
   status: 403,
-  description: 'Unauthorized',
+  description: 'Forbidden',
   type: UnauthorizedResponseDto,
 })
 export class CategoryController {
@@ -83,9 +84,9 @@ export class CategoryController {
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdateCategoryDto,
     @CurrentLanguage() language: Language,
-    // @CurrentUser() authUser: AuthUser,
+    @CurrentUser() authUser: AuthUser,
   ): Promise<CategoryResponseWrapperDto> {
-    const category = await this.categoryService.update(id, dto, language.id);
+    const category = await this.categoryService.update(id, dto, language.id, authUser);
     return {
       message: 'Category successfully updated',
       data: category,
@@ -95,9 +96,14 @@ export class CategoryController {
   @Delete('/:id')
   @ApiResponse({ status: 204, description: 'Category deleted successfully' })
   @ApiResponse({ 
-    status: 404, 
+    status: HttpStatus.NOT_FOUND, 
     description: 'Category not found or wrong language',
     type: NotFoundResponseDto,
+  })
+  @ApiResponse({ 
+    status: HttpStatus.CONFLICT, 
+    description: 'Conflict to delete',
+    type: CommonErrorDto,
   })
   @HttpCode(HttpStatus.NO_CONTENT)
   async delete(
@@ -141,7 +147,7 @@ export class CategoryController {
     type: ValidationErrorResponseDto,
   })
   @ApiResponse({
-    status: 404, 
+    status: HttpStatus.NOT_FOUND, 
     description: 'Wrong language',
     type: NotFoundResponseDto,
   })
