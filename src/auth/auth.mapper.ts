@@ -5,6 +5,7 @@ import { Category } from "../category/category.entity.js";
 import { languages } from "../language/language.cache.js";
 import { statuses } from "../status/status.cache.js";
 import { createPreviewUrl } from "../common/utils/media.util.js";
+import { prioritiesCached } from "../priority/priority.cache.js";
 
 export class AuthMapper {
 
@@ -60,6 +61,10 @@ export class AuthMapper {
       : [];
     response.languages = languages;
     response.statuses = statuses;
+    response.priorities = [
+      prioritiesCached.updating,
+      prioritiesCached.updated,
+    ]
     return response;
   }
 
