@@ -216,6 +216,7 @@ export class PostService {
         'c.id',
         'c.name',
         'c.slug',
+        'c.langId',
         'a.id',
         'a.email',
         'a.firstName',
@@ -263,7 +264,7 @@ export class PostService {
         .findOne({
           where: {
             id: dto.categoryId,
-            langId: In(userPrincipal.langIds),
+            langId: post.category.langId,
           }
         });
 
