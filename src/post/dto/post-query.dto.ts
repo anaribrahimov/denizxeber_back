@@ -1,6 +1,7 @@
 import { IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
 import { languages } from '../../language/language.cache.js';
+import { prioritiesCached } from '../../priority/priority.cache.js';
 
 export class PostQueryDto {
 
@@ -52,4 +53,8 @@ export class PostQueryDto {
   // @IsOptional()
   // @IsString()
   // order?: 'ASC' | 'DESC' | null = 'DESC';
+
+  @IsOptional()
+  @IsIn([prioritiesCached.updating.id.toString(), prioritiesCached.updated.id.toString()])
+  priorityId?: string | null;
 }

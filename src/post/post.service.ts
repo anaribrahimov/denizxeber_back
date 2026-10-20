@@ -400,7 +400,7 @@ export class PostService {
     userPrincipal: AuthUser,
     currentLang: Language,
   ): Promise<PaginatedResult<PostDto>> {
-    const { limit, page, categoryId, statusId, title, user } = query;
+    const { limit, page, categoryId, statusId, title, user, priorityId } = query;
 
     // find langids
     const langIds = currentLang ? [currentLang.id] : userPrincipal.langIds;
@@ -429,6 +429,10 @@ export class PostService {
       qb.andWhere('p.statusId = :statusId', { statusId });
     }
 
+    if (priorityId) {
+      qb.andWhere('p.priorityId = :priorityId', { priorityId });
+    }
+
     if (title?.trim()) {
       qb.andWhere('p.title LIKE :title', { title: `%${title.trim()}%` });
     }
@@ -450,8 +454,7 @@ export class PostService {
     qb
       .andWhere('p.deletedAt IS NULL')
       .orderBy({
-        'p.isUpdating': 'DESC',
-        'p.sort_at': 'DESC'
+        'p.id': 'DESC',
       })
       .skip((page - 1) * limit)
       .take(limit);
