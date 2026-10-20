@@ -604,11 +604,16 @@ export class PostService {
       throw new NotFoundException(`Post with slug "${postSlug}" not found`);
     }
 
-    // increase post view count
-    post.viewCount++;
-
-    // save post
-    await this.postRepository.save(post);
+    await this.postRepository
+      .createQueryBuilder()
+      .update(Post)
+      .set({
+        viewCount: () => 'view_count + 1',
+        // disable mysql updating updated_at column for view_count update
+        updatedAt: () => 'updated_at',
+      })
+      .where('id = :id', { id: post.id })
+      .execute();
 
     // get cover images
     if (post.coverImageId) {
