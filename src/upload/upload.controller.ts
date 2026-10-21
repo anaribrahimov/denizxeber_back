@@ -75,7 +75,10 @@ export class UploadController {
           skipMagicNumbersValidation: true,
           errorMessage: 'Suported file extensions are jpg, jpeg, png, webp, gif, mp4, mpeg, mov, qt, webm',
         })
-        .addMaxSizeValidator({ maxSize: MAX_VIDEO_SIZE })
+        .addMaxSizeValidator({ 
+          maxSize: MAX_VIDEO_SIZE, 
+          errorMessage: `File size must not exceed ${MAX_VIDEO_SIZE} byte` 
+        })
         .build({
           fileIsRequired: true,
           errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
