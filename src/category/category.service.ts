@@ -231,7 +231,6 @@ export class CategoryService {
     const hasPost = await this.postRepository
       .exists({
         where: { categoryId: id },
-        withDeleted: true
       });
 
     if (hasPost) {
