@@ -23,6 +23,7 @@ import { winstonConfig } from './logger/winston.config.js';
 import { CategoryModule } from './category/category.module.js';
 import { PostModule } from './post/post.module.js';
 import { BannerNameModule } from './banner-name/banner-name.module.js';
+import { BannerModule } from './banner/banner.module.js';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { BannerNameModule } from './banner-name/banner-name.module.js';
     CategoryModule,
     PostModule,
     BannerNameModule,
+    BannerModule,
   ],
   // controllers: [AppController],
   providers: [
