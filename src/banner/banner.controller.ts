@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { RolesGuard } from "../auth/guards/roles.guard.js";
 import { BannerService } from "./banner.service.js";
@@ -12,9 +12,14 @@ import { ValidationErrorResponseDto } from "../common/dto/validation-error-respo
 import { NotFoundResponseDto } from "../common/dto/not-found-response.dto.js";
 import { UpdateBannerDto } from "./dto/update-banner.dto.js";
 import { ValidationException } from "../common/exceptions/validation.exception.js";
+import { ApiDataArrayResponse } from "../common/decorators/api-data-array-response.decorator.js";
+import { LangCodeQueryDto } from "../common/dto/lang-code-query.dto.js";
+import { LanguageQueryGuard } from "../common/guards/language-query.guard.js";
+import { CurrentLanguage } from "../common/decorators/current-language.decorator.js";
+import { LanguageDto } from "../language/dto/language.dto.js";
+import { Public } from "../auth/decorators/public.decorator.js";
 
 @Controller('/banners')
-@UseGuards(RolesGuard)
 @ApiTags('Banners')
 export class BannerController {
 
@@ -23,6 +28,7 @@ export class BannerController {
   ) { }
 
   @Post()
+  @UseGuards(RolesGuard)
   @Roles('Admin')
   @ApiDataResponse(BannerDto, HttpStatus.CREATED, '', '')
   @ApiResponse({
@@ -49,7 +55,22 @@ export class BannerController {
     }
   }
 
+  @Get()
+  @Public()
+  @UseGuards(LanguageQueryGuard)
+  @ApiDataArrayResponse(BannerDto, HttpStatus.OK, '', '')
+  @HttpCode(HttpStatus.CREATED)
+  public async findAll(
+    @Query() queryDto: LangCodeQueryDto,
+    @CurrentLanguage() currentLanguage: LanguageDto,
+  ): Promise<AppApiResponse<BannerDto[]>> {
+    return {
+      data: await this.bannerService.findAll(currentLanguage.id),
+    }
+  }
+
   @Patch('/:id')
+  @UseGuards(RolesGuard)
   @Roles('Admin')
   @ApiDataResponse(BannerDto, HttpStatus.OK, '', '')
   @ApiResponse({
@@ -90,6 +111,7 @@ export class BannerController {
   }
 
   @Delete('/:id')
+  @UseGuards(RolesGuard)
   @Roles('Admin')
   @ApiResponse({
     status: HttpStatus.NO_CONTENT,

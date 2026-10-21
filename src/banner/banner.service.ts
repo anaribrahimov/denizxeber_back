@@ -203,4 +203,24 @@ export class BannerService {
 
     await this.bannerRepository.delete(id);
   }
+
+  async findAll(langId: number): Promise<BannerDto[]> {
+    const banners = await this.bannerRepository
+      .find({
+        where: {
+          langId: langId,
+        },
+        relations: {
+          bannerName: true,
+          language: true,
+          coverImage: {
+            versions: true
+          }
+        },
+        order: {
+          id: 'ASC'
+        }
+      });
+    return banners.map((banner) => BannerMapper.toDto(banner, this.filesPublicUrl));
+  }
 }
