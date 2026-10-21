@@ -1,10 +1,8 @@
 import 'dotenv/config';
-import { DataSource } from 'typeorm';
+import { DataSource, type DataSourceOptions } from 'typeorm';
+import { type SeederOptions } from 'typeorm-extension';
 
-// import { Language } from '../language/language.entity.js';
-// import { User } from '../user/user.entity.js';
-
-export default new DataSource({
+const options: DataSourceOptions & SeederOptions = {
   type: 'mysql',
 
   host: process.env.DATABASE_HOST,
@@ -15,16 +13,14 @@ export default new DataSource({
 
   database: process.env.DATABASE_NAME,
 
-  // entities: [
-  //   Language,
-  //   User,
-  // ],
+  entities: ['src/**/*.entity{.js,.ts}'],
 
   migrationsRun: false,
-
   synchronize: false,
 
-  migrations: [
-    'src/database/migrations/**/*{.js,.ts}',
-  ],
-});
+  migrations: ['src/database/migrations/**/*{.js,.ts}'],
+
+  seeds: ['src/database/seeds/**/*{.js,.ts}'],
+};
+
+export default new DataSource(options);

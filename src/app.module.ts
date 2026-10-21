@@ -22,6 +22,7 @@ import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './logger/winston.config.js';
 import { CategoryModule } from './category/category.module.js';
 import { PostModule } from './post/post.module.js';
+import { BannerNameModule } from './banner-name/banner-name.module.js';
 
 @Module({
   imports: [
@@ -72,6 +73,7 @@ import { PostModule } from './post/post.module.js';
     AuthModule,
     CategoryModule,
     PostModule,
+    BannerNameModule,
   ],
   // controllers: [AppController],
   providers: [
