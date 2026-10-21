@@ -187,4 +187,20 @@ export class BannerService {
 
     return BannerMapper.toDto(banner, this.filesPublicUrl);
   }
+
+  async remove(id: number): Promise<void> {
+    // find banner
+    const banner = await this.bannerRepository
+      .findOne({
+        where: {
+          id
+        }
+      });
+
+    if (!banner) {
+      throw new NotFoundException(`Banner not found: ${id}`);
+    }
+
+    await this.bannerRepository.delete(id);
+  }
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, HttpCode, HttpStatus, Param, ParseIntPipe, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { RolesGuard } from "../auth/guards/roles.guard.js";
 import { BannerService } from "./banner.service.js";
@@ -69,7 +69,7 @@ export class BannerController {
   })
   @ApiResponse({
     status: HttpStatus.NOT_FOUND,
-    description: 'Post not found',
+    description: 'Banner not found',
     type: NotFoundResponseDto,
   })
   public async update(
@@ -87,5 +87,33 @@ export class BannerController {
     return {
       data: await this.bannerService.update(id, dto),
     }
+  }
+
+  @Delete('/:id')
+  @Roles('Admin')
+  @ApiResponse({
+    status: HttpStatus.NO_CONTENT,
+    description: 'Banner successfully deleted',
+  })
+  @ApiResponse({
+    status: HttpStatus.UNAUTHORIZED,
+    description: 'Unauthorized',
+    type: CommonErrorDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.FORBIDDEN,
+    description: 'Forbidden',
+    type: CommonErrorDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.NOT_FOUND,
+    description: 'Banner not found',
+    type: NotFoundResponseDto,
+  })
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<void> {
+    await this.bannerService.remove(id);
   }
 }
