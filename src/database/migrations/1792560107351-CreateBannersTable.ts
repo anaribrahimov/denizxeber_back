@@ -9,7 +9,7 @@ export class CreateBannersTable1792560107351 implements MigrationInterface {
         \`banner_name_id\`      int NOT NULL,
         \`lang_id\`             int NOT NULL,
         \`cover_image_id\`      bigint unsigned not null,
-        \`link\`                text NULL,
+        \`link\`                varchar(512) NULL,
         \`created_at\`          datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
         \`updated_at\`          datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (\`banner_name_id\`) REFERENCES \`banner_names\`(\`id\`) ON DELETE RESTRICT,

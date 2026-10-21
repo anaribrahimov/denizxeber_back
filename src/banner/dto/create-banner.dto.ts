@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Min } from "class-validator";
+import { IsIn, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from "class-validator";
 import { languages } from "../../language/language.cache.js";
 
 export class CreateBannerDto {
@@ -20,5 +20,6 @@ export class CreateBannerDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(512)
   link?: string | null;
 }
