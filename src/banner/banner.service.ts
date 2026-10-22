@@ -7,12 +7,14 @@ import { Upload, UploadType } from "../upload/upload.entity.js";
 import { BannerName } from "../banner-name/banner-name.entity.js";
 import { CreateBannerDto } from "./dto/create-banner.dto.js";
 import { BannerDto } from "./dto/banner.dto.js";
-import { COVER_IMAGE_MIME_TYPES } from "../post/post.service.js";
 import { ValidationException } from "../common/exceptions/validation.exception.js";
 import { languages } from "../language/language.cache.js";
 import { LanguageDto } from "../language/dto/language.dto.js";
 import { ConfigService } from "@nestjs/config";
 import { UpdateBannerDto } from "./dto/update-banner.dto.js";
+import { IMAGE_MIME_TYPES } from "../common/multer/multer.config.js";
+
+export const BANNER_IMAGE_MIME_TYPES = Object.keys(IMAGE_MIME_TYPES);
 
 @Injectable()
 export class BannerService {
@@ -64,10 +66,10 @@ export class BannerService {
     if (!coverImage) {
       errors.coverImageId = ['Cover image not found'];
     } else {
-      if (!COVER_IMAGE_MIME_TYPES.includes(coverImage.fileMimeType)) {
+      if (!BANNER_IMAGE_MIME_TYPES.includes(coverImage.fileMimeType)) {
         errors.coverImageId = [
           'invalid file type. '
-          + `Allowed types: ${COVER_IMAGE_MIME_TYPES.join(', ')}`
+          + `Allowed types: ${BANNER_IMAGE_MIME_TYPES.join(', ')}`
         ];
       }
     }
@@ -162,10 +164,10 @@ export class BannerService {
       if (!coverImage) {
         errors['coverImageId'] = ['Cover image not found'];
       } else {
-        if (!COVER_IMAGE_MIME_TYPES.includes(coverImage.fileMimeType)) {
+        if (!BANNER_IMAGE_MIME_TYPES.includes(coverImage.fileMimeType)) {
           errors.coverImageId = [
             'invalid file type. '
-            + `Allowed types: ${COVER_IMAGE_MIME_TYPES.join(', ')}`
+            + `Allowed types: ${BANNER_IMAGE_MIME_TYPES.join(', ')}`
           ];
         } else {
           banner.coverImageId = dto.coverImageId.toString();
