@@ -24,6 +24,7 @@ import { CategoryModule } from './category/category.module.js';
 import { PostModule } from './post/post.module.js';
 import { BannerNameModule } from './banner-name/banner-name.module.js';
 import { BannerModule } from './banner/banner.module.js';
+import { SubscriberModule } from './subscribtion/subscriber.module.js';
 
 @Module({
   imports: [
@@ -76,6 +77,7 @@ import { BannerModule } from './banner/banner.module.js';
     PostModule,
     BannerNameModule,
     BannerModule,
+    SubscriberModule,
   ],
   // controllers: [AppController],
   providers: [
