@@ -504,7 +504,7 @@ export class PostService {
 
   public async todaysMostRead(language: Language): Promise<PublicPostDto[]> {
     const limit = 5;
-    const today = moment().subtract(2, 'days').utcOffset(0).format('YYYY-MM-DD');
+    const today = moment().subtract(1, 'days').utcOffset(0).format('YYYY-MM-DD');
 
     const posts = await this.postRepository
       .createQueryBuilder('p')
