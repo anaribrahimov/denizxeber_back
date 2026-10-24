@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import * as winston from 'winston';
 import 'winston-daily-rotate-file';
 import { utilities as nestWinstonModuleUtilities } from 'nest-winston';
@@ -34,17 +35,17 @@ export const winstonConfig: winston.LoggerOptions = {
     }),
 
     // Combined app log (optional, everything except access)
-    // new winston.transports.DailyRotateFile({
-    //   dirname: logDir,
-    //   filename: 'app-%DATE%.log',
-    //   datePattern: 'YYYY-MM-DD',
-    //   zippedArchive: true,
-    //   maxSize: '20m',
-    //   maxFiles: '14d',
-    //   format: winston.format.combine(
-    //     winston.format.timestamp(),
-    //     winston.format.json(),
-    //   ),
-    // }),
+    new winston.transports.DailyRotateFile({
+      dirname: logDir,
+      filename: 'app-%DATE%.log',
+      datePattern: 'YYYY-MM-DD',
+      zippedArchive: true,
+      maxSize: '20m',
+      maxFiles: '14d',
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        winston.format.json(),
+      ),
+    }),
   ],
 };

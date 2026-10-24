@@ -5,7 +5,7 @@ import { MailService } from '../../mail/mail.service.js';
 
 @Injectable()
 export class PostCreatedListener {
-  // private readonly logger = new Logger(PostCreatedListener.name);
+  private readonly logger = new Logger(PostCreatedListener.name);
 
   constructor(
     private readonly mailService: MailService,
@@ -17,8 +17,7 @@ export class PostCreatedListener {
       await this.mailService.queueNewPostNotification(event);
     } catch (err) {
       // Never let email problems break post creation
-      // this.logger.error(`Failed to enqueue emails for post ${event.postId}`, err);
-      console.log(err);
+      this.logger.error(`Failed to enqueue emails for post ${event.postId}`, err)
     }
   }
 }

@@ -1,11 +1,11 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Job } from 'bullmq';
 import { MAIL_QUEUE } from './mail.constants.js';
 import { PostEmailJobData } from './mail.service.js';
 import { MailerService } from '@nestjs-modules/mailer';
 import { I18nService } from '@nestjs/i18n';
+import { Logger } from '@nestjs/common';
 
 @Processor(MAIL_QUEUE, { concurrency: 5 })
 export class MailProcessor extends WorkerHost {
@@ -14,7 +14,7 @@ export class MailProcessor extends WorkerHost {
   constructor(
     private readonly mailer: MailerService,
     private readonly config: ConfigService,
-    private readonly i18nService: I18nService
+    private readonly i18nService: I18nService,
   ) {
     super();
   }
