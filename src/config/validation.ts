@@ -19,4 +19,16 @@ export const validationSchema = Joi.object({
   REFRESH_TOKEN_TTL_DAYS: Joi.string().optional()
     .pattern(/^\d$/),
   FILES_PUBLIC_URL: Joi.string().required().trim(),
+  PUBLIC_APP_NAME_AZ: Joi.string().required().trim(),
+  PUBLIC_APP_NAME_EN: Joi.string().required().trim(),
+  PUBLIC_APP_NAME_TR: Joi.string().required().trim(),
+  PUBLIC_APP_NAME_RU: Joi.string().required().trim(),
+  PUBLIC_APP_NAME_KZ: Joi.string().required().trim(),
+  PUBLIC_APP_NAME_TM: Joi.string().required().trim(),
+  PUBLIC_APP_URL_AZ: Joi.string().required().trim(),
+  PUBLIC_APP_URL_EN: Joi.string().required().trim(),
+  PUBLIC_APP_URL_TR: Joi.string().required().trim(),
+  PUBLIC_APP_URL_RU: Joi.string().required().trim(),
+  PUBLIC_APP_URL_KZ: Joi.string().required().trim(),
+  PUBLIC_APP_URL_TM: Joi.string().required().trim(),
 });

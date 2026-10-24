@@ -55,7 +55,9 @@ export class SubscriberController {
     @CurrentLanguage() currentLang: LanguageDto,
     @CurrentUser() userPrincipal: AuthUser,
   ): Promise<PaginatedResult<SubscriberDto>> {
-    return this.subscriberService.findPaginated(dto, userPrincipal, currentLang);
+    // find langids
+    const langIds = currentLang ? [currentLang.id] : userPrincipal.langIds;
+    return this.subscriberService.findPaginated(dto, langIds);
   }
 
   @Delete('/:id')

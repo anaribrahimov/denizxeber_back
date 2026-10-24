@@ -30,6 +30,9 @@ import { decodePostCursor, PostCursor } from './util/pagination.util.js';
 import { CursorPaginatedResponse } from '../common/interfaces/paginated-response.interface.js';
 import { CursorPaginationMetaDto } from '../common/dto/cursor-pagination-meta.dto.js';
 import { CategoryAndSliderPostsResponseDto, CategoryPostItem } from './public/dto/category-slider-posts-response.dto.js';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PostCreatedEvent } from './event/post-created.event.js';
+import { generatePublicPostPreviewUrl } from './util/util.js';
 
 export const COVER_IMAGE_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 
@@ -37,6 +40,8 @@ export const COVER_IMAGE_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 export class PostService {
 
   private readonly filesPublicUrl: string;
+  private readonly appUrl: string;
+  private readonly postPreviewUrl: string;
 
   constructor(
     @InjectRepository(Post)
@@ -52,9 +57,15 @@ export class PostService {
     private readonly userRepository: Repository<User>,
 
     private readonly configService: ConfigService,
+
+    private readonly eventEmitter: EventEmitter2,
   ) {
     this.filesPublicUrl =
       this.configService.getOrThrow<string>('app.filesPublicUrl');
+    this.appUrl =
+      this.configService.getOrThrow<string>('app.url');
+    this.postPreviewUrl =
+      this.configService.getOrThrow<string>('app.postPreviewUrl');
   }
 
   private async getCoverImages(coverImageIds: string[]): Promise<Upload[]> {
@@ -70,6 +81,31 @@ export class PostService {
     userPrincipal: AuthUser
   ): Promise<PostDto> {
     const errors: Record<string, string[]> = {};
+
+    // get author
+    const author = await this.userRepository
+      .findOne({
+        where: {
+          id: userPrincipal.userId,
+        },
+        // relations: {
+        //   profileImage: {
+        //     versions: true
+        //   }
+        // },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          // profileImageId: true,
+          // profileImage: {
+          //   fileKey: true,
+          //   versions: {
+          //     fileKey: true
+          //   }
+          // }
+        }
+      });
 
     // find category
     const category = await this.categoryRepository.findOne({
@@ -140,7 +176,27 @@ export class PostService {
       email: userPrincipal.email,
     } as User;
 
-    return PostMapper.toDto(post, this.filesPublicUrl);
+    const previewUrl = generatePublicPostPreviewUrl(post.slug, this.postPreviewUrl);
+
+    const dto = PostMapper.toDto(post, this.filesPublicUrl);
+
+    // emit post created event
+    this.eventEmitter.emit(
+      PostCreatedEvent.eventName,
+      new PostCreatedEvent(
+        post.id,
+        category!.language.name,
+        post.title,
+        previewUrl,
+        post.title.length > 200 ? post.title.slice(0, 200) : post.title,
+        (author!.firstName + ' ' + author!.lastName)?.trim() ?? null,
+        post.createdAt,
+        dto.coverImage!.originalUrl,
+        dto.coverImage!.thumbnailUrl ?? null,
+      ),
+    );
+
+    return dto;
   }
 
   async findOne(

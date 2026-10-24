@@ -39,13 +39,9 @@ export class SubscriberService {
 
   async findPaginated(
     dto: GetSubscribersDto,
-    userPrincipal: AuthUser,
-    currentLang: LanguageDto | null,
+    langIds: number[]
   ): Promise<PaginatedResult<SubscriberDto>> {
     const { limit, page, email } = dto;
-
-    // find langids
-    const langIds = currentLang ? [currentLang.id] : userPrincipal.langIds;
 
     const qb = this.subscriberRepository
       .createQueryBuilder('s')
