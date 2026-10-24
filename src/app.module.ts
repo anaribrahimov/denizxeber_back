@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bullmq';
+import { BullBoardModule } from "@bull-board/nestjs";
+import { ExpressAdapter } from "@bull-board/express";
 import { ScheduleModule } from '@nestjs/schedule';
 import { WinstonModule } from 'nest-winston';
 import { APP_FILTER } from '@nestjs/core';
@@ -12,6 +14,7 @@ import {
   JsonI18nLoader,
   QueryLocaleResolver,
 } from '@nestjs/i18n';
+import basicAuth from "express-basic-auth";
 
 import { validationSchema } from './config/validation.js';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -93,6 +96,20 @@ import { languageCodes } from './language/language.cache.js';
           // password: config.get<number>('REDIS_PASSWORD'),
           // user: config.get<number>('REDIS_USER'),
         },
+      }),
+    }),
+
+    BullBoardModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => ({
+        route: "/queues",
+        adapter: ExpressAdapter,
+        middleware: basicAuth({
+          challenge: true,
+          users: {
+            admin: config.getOrThrow<string>('app.bullBoardAdminPassword'),
+          },
+        }),
       }),
     }),
 

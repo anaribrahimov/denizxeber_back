@@ -30,6 +30,9 @@
     "seed:run:prod": "typeorm-extension seed:run -d dist/database/data-source.js"
   },
   "dependencies": {
+    "@bull-board/api": "^9.10.5",
+    "@bull-board/express": "^9.10.5",
+    "@bull-board/nestjs": "^9.10.5",
     "@nestjs-modules/mailer": "^3.0.2",
     "@nestjs/bullmq": "^12.0.0",
     "@nestjs/common": "^12.0.1",
@@ -49,6 +52,7 @@
     "class-validator": "^0.15.1",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
+    "express-basic-auth": "^1.2.1",
     "fluent-ffmpeg": "^2.1.3",
     "handlebars": "^4.7.10",
     "ioredis": "^6.0.0",

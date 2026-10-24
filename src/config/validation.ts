@@ -31,4 +31,5 @@ export const validationSchema = Joi.object({
   PUBLIC_APP_URL_RU: Joi.string().required().trim(),
   PUBLIC_APP_URL_KZ: Joi.string().required().trim(),
   PUBLIC_APP_URL_TM: Joi.string().required().trim(),
+  BULL_BOARD_ADMIN_PASSWORD: Joi.string().required().trim(),
 });

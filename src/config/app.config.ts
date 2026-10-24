@@ -24,4 +24,5 @@ export const appConfig = registerAs('app', () => ({
     kz: process.env.PUBLIC_APP_URL_KZ,
     tm: process.env.PUBLIC_APP_URL_TM,
   },
+  bullBoardAdminPassword: process.env.BULL_BOARD_ADMIN_PASSWORD ?? null,
 }));

@@ -9,11 +9,17 @@ import { MAIL_QUEUE } from './mail.constants.js';
 import { MailService } from './mail.service.js';
 import { MailProcessor } from './mail.processor.js';
 import { I18nService } from '@nestjs/i18n';
+import { BullBoardModule } from '@bull-board/nestjs';
+import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
 
 @Module({
   imports: [
     SubscriberModule,
     BullModule.registerQueue({ name: MAIL_QUEUE }),
+    BullBoardModule.forFeature({
+      name: MAIL_QUEUE,
+      adapter: BullMQAdapter, //or use BullAdapter if you're using bull instead of bullMQ
+    }),
     MailerModule.forRootAsync({
       inject: [ConfigService, I18nService],
       useFactory: (config: ConfigService, i18n: I18nService) => ({
