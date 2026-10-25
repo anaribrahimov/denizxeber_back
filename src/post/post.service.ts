@@ -33,6 +33,7 @@ import { CategoryAndSliderPostsResponseDto, CategoryPostItem } from './public/dt
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PostCreatedEvent } from './event/post-created.event.js';
 import { generatePublicPostPreviewUrl } from './util/util.js';
+import dayjs from 'dayjs';
 
 export const COVER_IMAGE_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 
@@ -456,7 +457,17 @@ export class PostService {
     userPrincipal: AuthUser,
     currentLang: Language,
   ): Promise<PaginatedResult<PostDto>> {
-    const { limit, page, categoryId, statusId, title, user, priorityId } = query;
+    const { 
+      limit, 
+      page, 
+      categoryId, 
+      statusId, 
+      title, 
+      user, 
+      priorityId,
+      createdFrom,
+      createdTo,
+    } = query;
 
     // find langids
     const langIds = currentLang ? [currentLang.id] : userPrincipal.langIds;
@@ -505,6 +516,18 @@ export class PostService {
           user: `%${user.trim()}%`,
         },
       );
+    }
+
+    if (createdFrom && dayjs(createdFrom).isValid()) {
+      qb.andWhere('p.createdAt >= :createdFrom', {
+        createdFrom: createdFrom
+      });
+    }
+
+    if (createdTo && dayjs(createdTo).isValid()) {
+      qb.andWhere('p.createdAt <= :createdTo', {
+        createdTo
+      });
     }
 
     qb

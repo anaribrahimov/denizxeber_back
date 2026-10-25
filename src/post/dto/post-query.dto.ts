@@ -1,7 +1,8 @@
-import { IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min, ValidateIf } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { languages } from '../../language/language.cache.js';
 import { prioritiesCached } from '../../priority/priority.cache.js';
+import dayjs from 'dayjs';
 
 export class PostQueryDto {
 
@@ -57,4 +58,24 @@ export class PostQueryDto {
   @IsOptional()
   @IsIn([prioritiesCached.updating.id.toString(), prioritiesCached.updated.id.toString()])
   priorityId?: string | null;
+
+  @Transform(({ value }) => {
+    if (!value?.trim()) return value;
+    const val = value.trim();
+    if (!dayjs(val).isValid()) return val;
+    return dayjs(val).format('YYYY-MM-DD HH:mm:ss');
+  })
+  @IsOptional()
+  @ValidateIf((object, value) => value)
+  createdFrom?: Date | null;
+
+  @Transform(({ value }) => {
+    if (!value?.trim()) return value;
+    const val = value.trim();
+    if (!dayjs(val).isValid()) return val;
+    return dayjs(val).format('YYYY-MM-DD HH:mm:ss');
+  })
+  @IsOptional()
+  @ValidateIf((object, value) => value)
+  createdTo?: Date | null;
 }
