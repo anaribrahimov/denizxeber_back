@@ -28,7 +28,9 @@ export class UserMapper {
   static toResponseDTO(
     user: User, 
     languages: Language[], 
-    publicUrl: string
+    publicUrl: string,
+    publishedPostCount: number | null,
+    draftPostCount: number | null
   ): UserResponseDTO {
     const userLanguages = user.langIds
       .reduce((acc: Language[], langId: number) => {
@@ -58,6 +60,14 @@ export class UserMapper {
                 : null,
         }
         : null;
+    if (publishedPostCount !== null) {
+      response.publishedPostCount = publishedPostCount;
+    }
+
+    if (draftPostCount !== null) {
+      response.draftPostCount = draftPostCount;
+    }
+    
     return response;
   }
 }

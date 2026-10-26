@@ -18,6 +18,8 @@ import { AuthUser } from '../auth/interfaces/auth-user.interface.js';
 import { roles } from '../roles/role.cache.js';
 import { ProcessedFileResult } from '../common/services/media.service.js';
 import { UploadService } from '../upload/upload.service.js';
+import { Post } from '../post/post.entity.js';
+import { StatusEnum } from '../status/status.cache.js';
 
 @Injectable()
 export class UsersService {
@@ -119,7 +121,13 @@ export class UsersService {
 
       await queryRunner.commitTransaction(); // commit transaction
 
-      return UserMapper.toResponseDTO(savedUser, languages, this.publicUrl);
+      return UserMapper.toResponseDTO(
+        savedUser, 
+        languages,
+        this.publicUrl,
+        0,
+        0
+      );
     } catch (err) {
       await queryRunner.rollbackTransaction();
       if (profileImage) {
@@ -257,7 +265,7 @@ export class UsersService {
 
       await queryRunner.commitTransaction(); // commit transaction
 
-      return UserMapper.toResponseDTO(updatedUser!, languages, this.publicUrl);
+      return UserMapper.toResponseDTO(updatedUser!, languages, this.publicUrl, null, null);
     } catch (err) {
       await queryRunner.rollbackTransaction();
       if (profileImage) await deleteFile(profileImage.path);
@@ -330,41 +338,140 @@ export class UsersService {
 
     const languages: Language[] = await this.languageRepository.find();
 
-    return UserMapper.toResponseDTO(user, languages, this.publicUrl);
+    const counts = await this.usersRepository
+      .createQueryBuilder('users')
+      .select('users.id', 'userId')
+      .addSelect(
+        `(
+          SELECT COUNT(*)
+          FROM posts post
+          WHERE post.author_id = users.id
+            AND post.status_id = :draftStatus
+            AND post.deleted_at IS NULL
+        )`,
+        'draftPostCount',
+      )
+      .addSelect(
+        `(
+          SELECT COUNT(*)
+          FROM posts post
+          WHERE post.author_id = users.id
+            AND post.status_id = :publishedStatus
+            AND post.deleted_at IS NULL
+        )`,
+        'publishedPostCount',
+      )
+      .where('users.id = :id', { id })
+      .setParameters({
+        draftStatus: StatusEnum.Draft,
+        publishedStatus: StatusEnum.Published,
+      })
+      .getRawOne();
+
+    return UserMapper.toResponseDTO(
+      user, 
+      languages, 
+      this.publicUrl, 
+      Number(counts.publishedPostCount ?? 0), 
+      Number(counts.draftPostCount ?? 0),
+    );
   }
 
-  async findPaginated(query: PaginateUserDto): Promise<PaginatedResult<UserResponseDTO>> {
+  async findPaginated(
+    query: PaginateUserDto,
+  ): Promise<PaginatedResult<UserResponseDTO>> {
     const { limit, page, search } = query;
 
     const qb = this.usersRepository
       .createQueryBuilder('users')
       .leftJoinAndSelect('users.role', 'roles')
       .leftJoinAndSelect('users.profileImage', 'profileImage')
-      .leftJoinAndSelect('profileImage.versions', 'version');
+      .leftJoinAndSelect('profileImage.versions', 'version')
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(*)')
+          .from(Post, 'post')
+          .where('post.authorId = users.id')
+          .andWhere('post.statusId = :draftStatus', {
+            draftStatus: StatusEnum.Draft
+          });
+      }, 'draftPostCount')
+      .addSelect((subQuery) => {
+        return subQuery
+          .select('COUNT(*)')
+          .from(Post, 'post')
+          .where('post.authorId = users.id')
+          .andWhere('post.statusId = :publishedStatus', {
+            publishedStatus: StatusEnum.Published
+          });
+      }, 'publishedPostCount')
 
-    const languages: Language[] = await this.languageRepository.find();
+    const languages = await this.languageRepository.find();
 
     if (search) {
       qb.andWhere(
-        '(users.email LIKE :search OR users.first_name LIKE :search OR users.last_name LIKE :search)',
-        { search: `%${search}%` }
-      )
+        `(
+          users.email LIKE :search
+          OR users.first_name LIKE :search
+          OR users.last_name LIKE :search
+        )`,
+        { search: `%${search}%` },
+      );
     }
 
     qb.orderBy('users.id', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
-    const [data, total] = await qb.getManyAndCount();
+    const [{ entities, raw }, total] = await Promise.all([
+      qb.getRawAndEntities(),
+      qb.clone().getCount(),
+    ]);
+
+    // Index raw rows by user ID to avoid relying on array position.
+    const postCountsByUserId = new Map<
+      string | number,
+      { draftPostCount: number; publishedPostCount: number }
+    >();
+
+    for (const row of raw) {
+      const userId = row.users_id;
+
+      if (userId == null) {
+        continue;
+      }
+
+      postCountsByUserId.set(userId, {
+        draftPostCount: Number(row.draftPostCount ?? 0),
+        publishedPostCount: Number(row.publishedPostCount ?? 0),
+      });
+    }
+
+    const data = entities.map((user) => {
+      const counts = postCountsByUserId.get(user.id) ?? {
+        draftPostCount: 0,
+        publishedPostCount: 0,
+      };
+
+      return {
+        ...UserMapper.toResponseDTO(
+          user, 
+          languages, 
+          this.publicUrl, 
+          counts.publishedPostCount, 
+          counts.draftPostCount),
+        // ...counts,
+      };
+    });
 
     return {
-      data: data.map((item: User) => UserMapper.toResponseDTO(item, languages, this.publicUrl)),
+      data,
       meta: {
         total,
         page,
         limit,
         totalPages: Math.ceil(total / limit),
-      }
-    }
+      },
+    };
   }
 }

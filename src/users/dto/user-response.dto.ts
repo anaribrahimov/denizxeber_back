@@ -19,6 +19,8 @@ export class UserResponseDTO {
   updatedAt?: Date | null;
   isActive: boolean;
   profileImage: UserProfileImageResult | null;
+  publishedPostCount?: number | null;
+  draftPostCount?: number | null;
 }
 
 export class ControllerUserResponseDto {
