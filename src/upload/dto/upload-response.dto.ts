@@ -1,6 +1,7 @@
 import { ApiOperation, ApiProperty } from "@nestjs/swagger";
 import { UploadType } from "../upload.entity.js";
 import { UploadVersionResponseDto } from "./upload-version-response.dto.js";
+import { UploadOwnerDto } from "./upload-owner.dto.js";
 
 export class UploadResponseDto {
 
@@ -44,5 +45,8 @@ export class UploadResponseDto {
   versions: UploadVersionResponseDto[];
 
   @ApiProperty()
-  uploadedBy: number | null;
+  owner?: UploadOwnerDto | null;
+
+  @ApiProperty()
+  latestPostTitle?: string | null;
 }

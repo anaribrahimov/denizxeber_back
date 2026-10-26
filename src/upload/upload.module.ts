@@ -9,9 +9,11 @@ import { ImageProcessorService } from "../common/services/image-processor.servic
 import { VideoProcessorService } from "../common/services/video-processor.service.js";
 import { UploadVersion } from "./upload-version.entity.js";
 import { PublicUploadController } from "./public/upload.controller.js";
+import { User } from "../users/user.entity.js";
+import { Post } from "../post/post.entity.js";
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Upload, UploadVersion])],
+  imports: [TypeOrmModule.forFeature([Upload, UploadVersion, User, Post])],
   controllers: [UploadController, PublicUploadController],
   providers: [
     UploadService, 

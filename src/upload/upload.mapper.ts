@@ -3,6 +3,7 @@ import { UploadResponseDto } from "./dto/upload-response.dto.js";
 import { UploadVersion, UploadVersionType } from "./upload-version.entity.js";
 import { UploadVersionResponseDto } from "./dto/upload-version-response.dto.js";
 import { createPreviewUrl } from "../common/utils/media.util.js";
+import { UploadOwnerDto } from "./dto/upload-owner.dto.js";
 
 export class UploadMapper {
 
@@ -56,7 +57,11 @@ export class UploadMapper {
     return upload;
   }
 
-  public static toUploadResponseDto(upload: Upload, publicUrl: string): UploadResponseDto {
+  public static toUploadResponseDto(
+    upload: Upload, 
+    publicUrl: string,
+    latestPostTitle: string | null,
+  ): UploadResponseDto {
     const dto = new UploadResponseDto();
     dto.id = upload.id;
     dto.fileOriginalName = upload.fileOriginalName;
@@ -66,7 +71,6 @@ export class UploadMapper {
     dto.fileHeight = upload.fileHeight;
     dto.durationSec = upload.durationSec;
     dto.createdAt = upload.createdAt;
-    dto.uploadedBy = upload.uploadedBy;
     dto.preview = createPreviewUrl(publicUrl, upload.fileKey);
     dto.versions = 
       upload.versions?.map(
@@ -81,6 +85,15 @@ export class UploadMapper {
           preview: createPreviewUrl(publicUrl, uploadVersion.fileKey),
         })
       ) as UploadVersionResponseDto[] ?? [];
+    dto.owner = upload.owner
+      ? {
+        id: upload.owner.id,
+        firstName: upload.owner.firstName,
+        lastName: upload.owner.lastName,
+        email: upload.owner.email,
+      } as UploadOwnerDto
+      : null;
+    dto.latestPostTitle = latestPostTitle;
     return dto;
   }
 }

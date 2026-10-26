@@ -13,6 +13,9 @@ import { UploadResponseDto } from "./dto/upload-response.dto.js";
 import { PaginatedResult } from "../common/interfaces/paginated-result.interface.js";
 import { PaginateUploadDto } from "./dto/paginate-upload.dto.js";
 import { AuthUser } from "../auth/interfaces/auth-user.interface.js";
+import { User } from "../users/user.entity.js";
+import { Post } from "../post/post.entity.js";
+import { StatusEnum } from "../status/status.cache.js";
 
 @Injectable()
 export class UploadService {
@@ -25,6 +28,10 @@ export class UploadService {
     @InjectRepository(Upload)
     private readonly uploadRepository: Repository<Upload>,
     private readonly dataSource: DataSource,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(Post)
+    private readonly postRepository: Repository<Post>,
   ){
     this.publicUrl = this.mediaService.getFilePublicUrl();
   }
@@ -99,6 +106,20 @@ export class UploadService {
 
     try {
 
+      // find owner
+      const owner = await this.userRepository
+        .findOne({
+          where: {
+            id: userPrincipal.userId
+          },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          }
+        });
+
       // save upload to db
       const upload: Upload = await this.saveUploadTransactional(
         processedFile, 
@@ -109,7 +130,9 @@ export class UploadService {
 
       await queryRunner.commitTransaction(); // commit transaction
 
-      return UploadMapper.toUploadResponseDto(upload, this.publicUrl);
+      upload.owner = owner;
+
+      return UploadMapper.toUploadResponseDto(upload, this.publicUrl, null);
 
     } catch (err) {
 
@@ -128,20 +151,42 @@ export class UploadService {
   }
 
   public async findById(id: number): Promise<UploadResponseDto> {
-    const upload = await this.uploadRepository.findOne({
-      where: {
-        id
-      },
-      relations: {
-        versions: true
-      }
-    });
+    const upload = await this.uploadRepository
+      .createQueryBuilder('u')
+      .withDeleted()
+      .leftJoinAndSelect('u.versions', 'v')
+      .leftJoin('u.owner', 'o')
+      .addSelect('o.id')
+      .addSelect('o.firstName')
+      .addSelect('o.lastName')
+      .addSelect('o.email')
+      .where('u.id = :id', { id })
+      .andWhere('u.deletedAt IS NULL')
+      .getOne()
 
     if (!upload) {
       throw new NotFoundException("Upload not found");
     }
 
-    return UploadMapper.toUploadResponseDto(upload, this.publicUrl);
+    const latestPost = await this.postRepository
+      .findOne({
+        where: {
+          coverImageId: id,
+          statusId: StatusEnum.Published,
+        },
+        order: {
+          id: 'DESC'
+        },
+        select: {
+          title: true
+        }
+      });
+
+    return UploadMapper.toUploadResponseDto(
+      upload, 
+      this.publicUrl, 
+      latestPost?.title ?? null
+    );
   }
 
   async readFile(
@@ -230,26 +275,81 @@ export class UploadService {
     await this.uploadRepository.softDelete(id);
   }
 
-  async findPaginated(query: PaginateUploadDto): Promise<PaginatedResult<UploadResponseDto>> {
-    const { limit, page } = query;
+  async findPaginated(
+    query: PaginateUploadDto
+  ): Promise<PaginatedResult<UploadResponseDto>> {
+    const { limit, page, fileName } = query;
 
     const qb = this.uploadRepository
       .createQueryBuilder('uploads')
+      .withDeleted()
       .leftJoinAndSelect('uploads.versions', 'versions')
+      .leftJoin('uploads.owner', 'owner')
       .where('uploads.type = :type', { type: UploadType.PUBLIC })
+      .addSelect('owner.id')
+      .addSelect('owner.firstName')
+      .addSelect('owner.lastName')
+      .addSelect('owner.email')
+      .addSelect((subQuery) => 
+        subQuery
+          .select('p.title')
+          .from(Post, 'p')
+          .where('p.statusId = :statusId', { 
+            statusId: StatusEnum.Published
+          })
+          .where('p.coverImageId = uploads.id')
+          .andWhere('p.deletedAt IS NULL')
+          .orderBy('p.createdAt', 'DESC')
+          .limit(1),
+        'latestPostTitle'
+      )
 
-    qb.orderBy('uploads.id', 'DESC')
+    if (fileName?.trim()) {
+      qb.andWhere('uploads.fileOriginalName LIKE :fileName', {
+        fileName: `%${fileName.trim()}%`,
+      })
+    }
+
+    qb
+      .andWhere('uploads.deletedAt IS NULL')
+      .orderBy('uploads.id', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
-    const [data, total] = await qb.getManyAndCount();
+    const [{ entities, raw }, total] = await Promise.all([
+      qb.getRawAndEntities(),
+      qb.clone().getCount()
+    ])
+
+    // Index raw rows by user ID to avoid relying on array position.
+    const postTiteByUploadId = new Map<
+      string | number,
+      { latestPostTitle: string | null }
+    >();
+
+    for (const row of raw) {
+      const uplaodId = row.uploads_id;
+
+      if (uplaodId == null) {
+        continue;
+      }
+
+      postTiteByUploadId.set(uplaodId, {
+        latestPostTitle: row.latestPostTitle ?? null
+      });
+    }
+
+    const data = entities.map((upload) => {
+      const postTitle = postTiteByUploadId.get(upload.id);
+      return UploadMapper.toUploadResponseDto(
+        upload, 
+        this.publicUrl, 
+        postTitle?.latestPostTitle ?? null
+      );
+    })
 
     return {
-      data: data
-        .map(
-          (item: Upload) => 
-            UploadMapper.toUploadResponseDto(item, this.publicUrl)
-        ),
+      data,
       meta: {
         total,
         page,
