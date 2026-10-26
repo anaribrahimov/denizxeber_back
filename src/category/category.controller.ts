@@ -6,17 +6,19 @@ import { CategoryService } from "./category.service.js";
 import { CreateCategoryDto } from "./dto/create-category.dto.js";
 import { CurrentUser } from "../auth/decorators/current-user.decorator.js";
 import type { AuthUser } from "../auth/interfaces/auth-user.interface.js";
-import { CategoryResponseWrapperDto } from "./dto/category-response-wrapper.dto.js";
 import { UnauthenticatedResponseDto } from "../common/dto/unauthenticated-response.dto.js";
 import { UnauthorizedResponseDto } from "../common/dto/unauthorized-response.dto.js";
 import { ValidationErrorResponseDto } from "../common/dto/validation-error-response.dto.js";
 import { UpdateCategoryDto } from "./dto/update-category.dto.js";
 import { NotFoundResponseDto } from "../common/dto/not-found-response.dto.js";
-import { CategoriesResponseWrapperDto } from "./dto/categories-response-wrapper.dto.js";
 import { CurrentLanguage } from "../common/decorators/current-language.decorator.js";
 import { Language } from "../language/language.entity.js";
 import { LanguageGuard } from "../common/guards/language.guard.js";
 import { CommonErrorDto } from "../common/dto/common-error.dto.js";
+import { ApiDataResponse } from "../common/decorators/api-data-response.decorator.js";
+import { CategoryResponseDto } from "./dto/category-response.dto.js";
+import { AppApiResponse } from "../common/interfaces/app-api-response.interface.js";
+import { ApiDataArrayResponse } from "../common/decorators/api-data-array-response.decorator.js";
 
 @Controller('/:lang/categories')
 @UseGuards(RolesGuard)
@@ -38,11 +40,12 @@ export class CategoryController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new category' })
-  @ApiResponse({ 
-    status: 201, 
-    description: 'Category created successfully',
-    type: CategoryResponseWrapperDto,
-  })
+  @ApiDataResponse(
+    CategoryResponseDto,
+    HttpStatus.CREATED,
+    'Category successfully created',
+    ''
+  )
   @ApiResponse({ 
     status: 400, 
     description: 'Bad request',
@@ -58,18 +61,19 @@ export class CategoryController {
     @Body() dto: CreateCategoryDto,
     @CurrentUser() authUser: AuthUser,
     @CurrentLanguage() language: Language,
-  ): Promise<CategoryResponseWrapperDto> {
+  ): Promise<AppApiResponse<CategoryResponseDto>> {
     return {
       data: await this.categoryService.create(dto, authUser.userId, language),
     };
   }
 
   @Patch('/:id')
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Category updated successfully',
-    type: CategoriesResponseWrapperDto
-  })
+  @ApiDataResponse(
+    CategoryResponseDto,
+    HttpStatus.OK,
+    'Category successfully updated',
+    ''
+  )
   @ApiResponse({ 
     status: 400, 
     description: 'Bad request',
@@ -85,7 +89,7 @@ export class CategoryController {
     @Body() dto: UpdateCategoryDto,
     @CurrentLanguage() language: Language,
     @CurrentUser() authUser: AuthUser,
-  ): Promise<CategoryResponseWrapperDto> {
+  ): Promise<AppApiResponse<CategoryResponseDto>> {
     const category = await this.categoryService.update(id, dto, language.id, authUser);
     return {
       message: 'Category successfully updated',
@@ -109,17 +113,18 @@ export class CategoryController {
   async delete(
     @Param('id', ParseIntPipe) id: number,
     @CurrentLanguage() language: Language,
-  ) {
+  ): Promise<void> {
     await this.categoryService.remove(id, language.id);
   }
 
   @Get('/:id')
   @ApiOperation({ summary: 'Get category' })
-  @ApiResponse({
-    status: 200,
-    description: 'Get category',
-    type: CategoryResponseWrapperDto,
-  })
+  @ApiDataResponse(
+    CategoryResponseDto,
+    HttpStatus.OK,
+    '',
+    ''
+  )
   @ApiResponse({ 
     status: 404, 
     description: 'Category not found or wrong language',
@@ -128,7 +133,7 @@ export class CategoryController {
   async find(
     @Param('id', ParseIntPipe) id: number,
     @CurrentLanguage() language: Language,
-  ): Promise<CategoryResponseWrapperDto> {
+  ): Promise<AppApiResponse<CategoryResponseDto>> {
     return { 
       data: await this.categoryService.findOne(id, language.id),
     };
@@ -136,11 +141,12 @@ export class CategoryController {
 
   @Get()
   @ApiOperation({ summary: 'Get all categories' })
-  @ApiResponse({
-    status: 200,
-    description: 'Get all categories',
-    type: CategoriesResponseWrapperDto,
-  })
+  @ApiDataArrayResponse(
+    CategoryResponseDto,
+    HttpStatus.OK,
+    '',
+    ''
+  )
   @ApiResponse({ 
     status: 400,
     description: 'Bad request',
@@ -151,7 +157,7 @@ export class CategoryController {
     description: 'Wrong language',
     type: NotFoundResponseDto,
   })
-  async findAll(@CurrentLanguage() language: Language): Promise<CategoriesResponseWrapperDto> {
+  async findAll(@CurrentLanguage() language: Language): Promise<AppApiResponse<CategoryResponseDto[]>> {
     const categories = await this.categoryService.findAll(language.id);
     return { data: categories };
   }
