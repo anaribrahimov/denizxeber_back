@@ -48,7 +48,8 @@ export class UsersService {
 
   async create(
     dto: CreateUserDto, 
-    profileImage: Express.Multer.File
+    profileImage: Express.Multer.File,
+    userPrincipal: AuthUser,
   ): Promise<UserResponseDTO> {
     const errors: Record<string, string[]> = {};
 
@@ -107,7 +108,12 @@ export class UsersService {
       const savedUpload: Upload | null = 
         processedFile 
           ? await this.uploadService
-              .saveUploadTransactional(processedFile, queryRunner, UploadType.PRIVATE) 
+              .saveUploadTransactional(
+                processedFile, 
+                queryRunner, 
+                UploadType.PRIVATE, 
+                userPrincipal.userId
+              ) 
           : null;
 
       const newUser = await UserMapper.toEntity(dto, role!, savedUpload);
@@ -237,7 +243,12 @@ export class UsersService {
         if (processedFile) {
           const savedUpload: Upload = 
             await this.uploadService
-              .saveUploadTransactional(processedFile, queryRunner, UploadType.PRIVATE);
+              .saveUploadTransactional(
+                processedFile, 
+                queryRunner, 
+                UploadType.PRIVATE,
+                authUser.userId
+              );
           user.profileImage = savedUpload;
         }
       }

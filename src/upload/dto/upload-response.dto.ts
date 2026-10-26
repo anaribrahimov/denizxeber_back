@@ -1,4 +1,4 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiOperation, ApiProperty } from "@nestjs/swagger";
 import { UploadType } from "../upload.entity.js";
 import { UploadVersionResponseDto } from "./upload-version-response.dto.js";
 
@@ -42,4 +42,7 @@ export class UploadResponseDto {
 
   @ApiProperty()
   versions: UploadVersionResponseDto[];
+
+  @ApiProperty()
+  uploadedBy: number | null;
 }

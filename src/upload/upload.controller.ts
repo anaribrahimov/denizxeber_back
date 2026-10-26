@@ -14,6 +14,8 @@ import { UnauthorizedResponseDto } from "../common/dto/unauthorized-response.dto
 import { PaginateUploadDto } from "./dto/paginate-upload.dto.js";
 import { PaginatedResult } from "../common/interfaces/paginated-result.interface.js";
 import { OpenapiUploadPaginatedResponseDto } from "./dto/openapi/paginated-response.dto.js";
+import { CurrentUser } from "../auth/decorators/current-user.decorator.js";
+import type { AuthUser } from "../auth/interfaces/auth-user.interface.js";
 
 @Controller('/uploads')
 @UseGuards(RolesGuard)
@@ -85,6 +87,7 @@ export class UploadController {
         }),
     )
     file: Express.Multer.File,
+    @CurrentUser() userPrincipal: AuthUser,
   ): Promise<UploadResultDto> {
     // console.log('file', file);
     const isImage = file.mimetype.startsWith('image/');
@@ -93,7 +96,7 @@ export class UploadController {
       throw new BadRequestException(`Image size must not exceed ${MAX_IMAGE_SIZE} byte`);
     }
 
-    const upload: UploadResponseDto = await this.uploadService.create(file);
+    const upload: UploadResponseDto = await this.uploadService.create(file, userPrincipal);
 
     return { data: upload };
   }

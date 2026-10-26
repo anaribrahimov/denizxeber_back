@@ -39,6 +39,7 @@ export class UploadMapper {
     fileHeight: number|null,
     durationSec: number|null,
     versions: UploadVersion[]|null,
+    uploadedBy: number | null,
   ): Upload {
     const upload = new Upload();
     upload.type = type;
@@ -51,6 +52,7 @@ export class UploadMapper {
     upload.fileHeight = fileHeight;
     upload.durationSec = durationSec;
     upload.versions = versions;
+    upload.uploadedBy = uploadedBy;
     return upload;
   }
 
@@ -64,6 +66,7 @@ export class UploadMapper {
     dto.fileHeight = upload.fileHeight;
     dto.durationSec = upload.durationSec;
     dto.createdAt = upload.createdAt;
+    dto.uploadedBy = upload.uploadedBy;
     dto.preview = createPreviewUrl(publicUrl, upload.fileKey);
     dto.versions = 
       upload.versions?.map(

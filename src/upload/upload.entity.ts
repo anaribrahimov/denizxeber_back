@@ -3,11 +3,14 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  JoinColumn,
+  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   Unique,
 } from 'typeorm';
 import { UploadVersion } from './upload-version.entity.js';
+import { User } from '../users/user.entity.js';
 
 export enum UploadType {
   PRIVATE = 'private',
@@ -108,10 +111,21 @@ export class Upload {
   })
   deletedAt: Date | null;
 
+  @Column({
+    name: 'uploaded_by',
+  })
+  uploadedBy: number | null;
+
   /**
    * Relations
    */
 
   @OneToMany(() => UploadVersion, (uploadVersion) => uploadVersion.upload)
   versions: UploadVersion[] | null;
+
+  @ManyToOne(() => User, {
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'uploaded_by' })
+  owner: User | null;
 }

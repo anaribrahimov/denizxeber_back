@@ -81,8 +81,13 @@ export class UsersController {
         }),
     )
     profileImage: Express.Multer.File,
+    @CurrentUser() userPrincipal: AuthUser,
   ): Promise<ControllerUserResponseDto> {
-    const user: UserResponseDTO = await this.usersService.create(createUserDto, profileImage);
+    const user: UserResponseDTO = await this.usersService.create(
+      createUserDto, 
+      profileImage, 
+      userPrincipal
+    );
     return {
       data: user,
     };

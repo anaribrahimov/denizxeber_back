@@ -12,6 +12,7 @@ import { ReadFileResult } from "../common/interfaces/file-stream.interface.js";
 import { UploadResponseDto } from "./dto/upload-response.dto.js";
 import { PaginatedResult } from "../common/interfaces/paginated-result.interface.js";
 import { PaginateUploadDto } from "./dto/paginate-upload.dto.js";
+import { AuthUser } from "../auth/interfaces/auth-user.interface.js";
 
 @Injectable()
 export class UploadService {
@@ -36,6 +37,7 @@ export class UploadService {
     processedFile: ProcessedFileResult, 
     queryRunner: QueryRunner,
     uploadType: UploadType,
+    uploadedBy: number | null,
   ): Promise<Upload> {
     // create upload entity
     let upload: Upload = UploadMapper.toEntity(
@@ -48,7 +50,8 @@ export class UploadService {
       processedFile.width,
       processedFile.height,
       processedFile.durationInSec ?? null,
-      null
+      null,
+      uploadedBy,
     );
 
     // save upload
@@ -80,7 +83,10 @@ export class UploadService {
     return this.mediaService.processUpload(file);
   }
   
-  public async create(file: Express.Multer.File): Promise<UploadResponseDto> {
+  public async create(
+    file: Express.Multer.File,
+    userPrincipal: AuthUser,
+  ): Promise<UploadResponseDto> {
     const processedFile = await this.processFile(file);
     // console.log(processedFile);
 
@@ -94,8 +100,12 @@ export class UploadService {
     try {
 
       // save upload to db
-      const upload: Upload = 
-        await this.saveUploadTransactional(processedFile, queryRunner, UploadType.PUBLIC);
+      const upload: Upload = await this.saveUploadTransactional(
+        processedFile, 
+        queryRunner, 
+        UploadType.PUBLIC,
+        userPrincipal.userId,
+      );
 
       await queryRunner.commitTransaction(); // commit transaction
 
