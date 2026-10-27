@@ -5,7 +5,6 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { commonUploadFilter, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, multerStorageConfig } from "../common/multer/multer.config.js";
 import { FileCleanupInterceptor } from "../common/interceptors/file-cleanup.interceptor.js";
 import { UploadResponseDto } from "./dto/upload-response.dto.js";
-import { UploadResultDto } from "./dto/upload-result.dto.js";
 import { CommonErrorDto } from "../common/dto/common-error.dto.js";
 import { RolesGuard } from "../auth/guards/roles.guard.js";
 import { Roles } from "../auth/decorators/roles.decorator.js";
@@ -13,9 +12,11 @@ import { UnauthenticatedResponseDto } from "../common/dto/unauthenticated-respon
 import { UnauthorizedResponseDto } from "../common/dto/unauthorized-response.dto.js";
 import { PaginateUploadDto } from "./dto/paginate-upload.dto.js";
 import { PaginatedResult } from "../common/interfaces/paginated-result.interface.js";
-import { OpenapiUploadPaginatedResponseDto } from "./dto/openapi/paginated-response.dto.js";
 import { CurrentUser } from "../auth/decorators/current-user.decorator.js";
 import type { AuthUser } from "../auth/interfaces/auth-user.interface.js";
+import { ApiDataResponse } from "../common/decorators/api-data-response.decorator.js";
+import { AppApiResponse } from "../common/interfaces/app-api-response.interface.js";
+import { ApiPaginatedResponse } from "../common/decorators/api-paginated-response.decorator.js";
 
 @Controller('/uploads')
 @UseGuards(RolesGuard)
@@ -40,11 +41,12 @@ export class UploadController {
   @Post()
   @ApiOperation({ summary: 'Upload a new file' })
   @ApiConsumes('multipart/form-data')
-  @ApiResponse({ 
-    status: 201, 
-    description: 'File uploaded successfully',
-    type: UploadResultDto,
-  })
+  @ApiDataResponse( 
+    UploadResponseDto,
+    HttpStatus.CREATED,
+    'File uploaded successfully',
+    ''
+  )
   @ApiResponse({ 
     status: 400, 
     description: 'Bad request',
@@ -88,7 +90,7 @@ export class UploadController {
     )
     file: Express.Multer.File,
     @CurrentUser() userPrincipal: AuthUser,
-  ): Promise<UploadResultDto> {
+  ): Promise<AppApiResponse<UploadResponseDto>> {
     // console.log('file', file);
     const isImage = file.mimetype.startsWith('image/');
 
@@ -103,18 +105,21 @@ export class UploadController {
 
   @Get('/:id')
   @ApiOperation({ summary: 'Find upload' })
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Returns upload data',
-    type: UploadResultDto,
-  })
+  @ApiDataResponse(
+    UploadResponseDto,
+    HttpStatus.OK,
+    'Returns upload data',
+    ''
+  )
   @ApiResponse({
     status: 404,
     description: 'Upload not found',
     type: CommonErrorDto,
   })
   @HttpCode(HttpStatus.OK)
-  async find(@Param('id', ParseIntPipe) id: number): Promise<UploadResultDto> {
+  async find(
+    @Param('id', ParseIntPipe) id: number
+  ): Promise<AppApiResponse<UploadResponseDto>> {
     const upload = await this.uploadService.findById(id);
     return { data: upload };
   }
@@ -131,16 +136,13 @@ export class UploadController {
     type: CommonErrorDto,
   })
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@Param('id', ParseIntPipe) id: number) {
+  async delete(@Param('id', ParseIntPipe) id: number): Promise<void> {
     await this.uploadService.delete(id);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get uploads' })
-  @ApiResponse({
-    status: HttpStatus.OK,
-    type: OpenapiUploadPaginatedResponseDto,
-  })
+  @ApiPaginatedResponse(UploadResponseDto)
   async findPaginated(
     @Query() query: PaginateUploadDto
   ): Promise<PaginatedResult<UploadResponseDto>> {

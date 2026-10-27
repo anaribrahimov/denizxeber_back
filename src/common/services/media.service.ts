@@ -126,6 +126,7 @@ export class MediaService {
       // console.log('filename', file.filename);
       // console.log('permanentpath', permanentPath);
       // console.log('path', path);
+      // console.log('mimetype', file.mimetype);
 
       /*
        * 4. Generate thumbnail
@@ -133,6 +134,7 @@ export class MediaService {
 
       if (
         isImage
+        && file.mimetype !== 'image/gif'
         && this.imageProcessorService.needsThumbnail(width, height)
       ) {
         const thumbnailDirectory = `${directory}/thumbs`;
