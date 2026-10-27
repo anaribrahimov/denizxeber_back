@@ -1,7 +1,5 @@
 import { Role } from "../../roles/role.entity.js";
 import { Language } from "../../language/language.entity.js";
-import { ApiProperty } from "@nestjs/swagger";
-import { PaginatedResult } from "../../common/interfaces/paginated-result.interface.js";
 
 export class UserProfileImageResult {
   originalUrl?: string;
@@ -21,20 +19,4 @@ export class UserResponseDTO {
   profileImage: UserProfileImageResult | null;
   publishedPostCount?: number | null;
   draftPostCount?: number | null;
-}
-
-export class ControllerUserResponseDto {
-
-  @ApiProperty()
-  data: UserResponseDTO;
-}
-
-export class ControllerUsersResponseDto implements PaginatedResult<UserResponseDTO> {
-  data: UserResponseDTO[];
-  meta: { 
-    total: number; 
-    page: number; 
-    limit: number; 
-    totalPages: number; 
-  };
 }

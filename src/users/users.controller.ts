@@ -3,7 +3,7 @@ import { CreateUserDto } from "./dto/create-user.dto.js";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { MAX_IMAGE_SIZE, multerStorageConfig, profileImageFileFilter } from "../common/multer/multer.config.js";
 import { UsersService } from "./users.service.js";
-import { ControllerUserResponseDto, ControllerUsersResponseDto, UserResponseDTO } from "./dto/user-response.dto.js";
+import { UserResponseDTO } from "./dto/user-response.dto.js";
 import { UpdateUserDTO } from "./dto/update-user.dto.js";
 import { FileCleanupInterceptor } from "../common/interceptors/file-cleanup.interceptor.js";
 import { PaginateUserDto } from "./dto/paginate-user.dto.js";
@@ -15,6 +15,9 @@ import { CurrentUser } from "../auth/decorators/current-user.decorator.js";
 import type { AuthUser } from "../auth/interfaces/auth-user.interface.js";
 import { ValidationErrorResponseDto } from "../common/dto/validation-error-response.dto.js";
 import { CommonErrorDto } from "../common/dto/common-error.dto.js";
+import { ApiDataResponse } from "../common/decorators/api-data-response.decorator.js";
+import { AppApiResponse } from "../common/interfaces/app-api-response.interface.js";
+import { ApiPaginatedResponse } from "../common/decorators/api-paginated-response.decorator.js";
 
 @Controller('/users')
 @UseGuards(RolesGuard)
@@ -36,11 +39,12 @@ export class UsersController {
   @Post()
   @ApiOperation({ summary: 'Create a new user' })
   @ApiConsumes('multipart/form-data')
-  @ApiResponse({ 
-    status: 201, 
-    description: 'User created successfully',
-    type: ControllerUserResponseDto
-  })
+  @ApiDataResponse(
+    UserResponseDTO,
+    HttpStatus.CREATED,
+    'User created successfully',
+    ''
+  )
   @ApiResponse({ 
     status: 400, 
     description: 'Bad request',
@@ -82,7 +86,7 @@ export class UsersController {
     )
     profileImage: Express.Multer.File,
     @CurrentUser() userPrincipal: AuthUser,
-  ): Promise<ControllerUserResponseDto> {
+  ): Promise<AppApiResponse<UserResponseDTO>> {
     const user: UserResponseDTO = await this.usersService.create(
       createUserDto, 
       profileImage, 
@@ -94,11 +98,12 @@ export class UsersController {
   }
 
   @Patch('/:id')
-  @ApiResponse({ 
-    status: 200, 
-    description: 'User updated successfully',
-    type: ControllerUserResponseDto
-  })
+  @ApiDataResponse( 
+    UserResponseDTO,
+    HttpStatus.OK,
+    'User updated successfully',
+    ''
+  )
   @ApiResponse({ 
     status: 400, 
     description: 'Bad request',
@@ -141,7 +146,7 @@ export class UsersController {
         }),
     )
     profileImage?: Express.Multer.File,
-  ): Promise<ControllerUserResponseDto> {
+  ): Promise<AppApiResponse<UserResponseDTO>> {
     const updated: UserResponseDTO = 
       await this.usersService
         .update(id, updateUserDto, currentUser, profileImage);
@@ -159,25 +164,22 @@ export class UsersController {
   }
 
   @Get('/:id')
-  @ApiResponse({ 
-    status: 200, 
-    description: 'User not found',
-    type: ControllerUserResponseDto,
-  })
+  @ApiDataResponse( 
+    UserResponseDTO,
+    HttpStatus.OK,
+    'User not found',
+    ''
+  )
   @ApiResponse({ status: 404, description: 'User not found' })
   async find(
     @Param('id', ParseIntPipe) id: number
-  ): Promise<ControllerUserResponseDto> {
+  ): Promise<AppApiResponse<UserResponseDTO>> {
     const user: UserResponseDTO = await this.usersService.find(id);
     return { data: user };
   }
 
   @Get()
-  @ApiResponse({ 
-    status: 200, 
-    description: 'Paginated users list',
-    type: ControllerUsersResponseDto,
-  })
+  @ApiPaginatedResponse(UserResponseDTO)
   async findPaginated(
     @Query() query: PaginateUserDto
   ): Promise<PaginatedResult<UserResponseDTO>> {
