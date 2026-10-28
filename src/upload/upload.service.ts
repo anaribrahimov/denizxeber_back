@@ -1,10 +1,10 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Upload, UploadType } from "./upload.entity.js";
 import { MediaService, ProcessedFileResult } from "../common/services/media.service.js";
 import { StorageService } from "../common/services/storage.service.js";
 import { UploadMapper } from "./upload.mapper.js";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, QueryRunner, Repository } from "typeorm";
+import { DataSource, In, IsNull, LessThan, MoreThan, Not, QueryRunner, Repository } from "typeorm";
 import { UploadVersion, UploadVersionType } from "./upload-version.entity.js";
 import { parseRangeHeader } from "../common/utils/range.util.js";
 import { RangeNotSatisfiableException } from "../common/exceptions/range-not-satisfiable.exception.js";
@@ -16,10 +16,12 @@ import { AuthUser } from "../auth/interfaces/auth-user.interface.js";
 import { User } from "../users/user.entity.js";
 import { Post } from "../post/post.entity.js";
 import { StatusEnum } from "../status/status.cache.js";
+import dayjs from "dayjs";
 
 @Injectable()
 export class UploadService {
 
+  private readonly logger = new Logger(UploadService.name);
   private readonly publicUrl: string;
 
   constructor(
@@ -357,5 +359,102 @@ export class UploadService {
         totalPages: Math.ceil(total / limit),
       }
     }
+  }
+
+  async purgeDeleteds(): Promise<number> {
+    const batchSize = 100;
+    const sevenDaysAgo = dayjs().subtract(7, 'days').toDate();
+
+    let lastId = 0;
+    let totalDeleted = 0;
+
+    while (true) {
+      const queryRunner = this.dataSource.createQueryRunner();
+
+      await queryRunner.connect();
+      await queryRunner.startTransaction();
+
+      try {
+        const uploads = await queryRunner.manager.find(Upload, {
+          withDeleted: true,
+          where: {
+            deletedAt: LessThan(sevenDaysAgo),
+            id: MoreThan(lastId),
+          },
+          relations: {
+            versions: true,
+          },
+          order: {
+            id: 'ASC',
+          },
+          take: batchSize,
+          lock: {
+            mode: 'pessimistic_write',
+          },
+        });
+
+        if (uploads.length === 0) {
+          await queryRunner.commitTransaction();
+          break;
+        }
+
+        const uploadIds = uploads.map((upload) => upload.id);
+
+        // Delete files from storage
+        for (const upload of uploads) {
+          const fileKey = upload.fileKey?.trim();
+
+          if (fileKey) {
+            const filePath = this.storageService.getAbsolutePath(
+              fileKey,
+            )
+  
+            if (filePath) {
+              await this.storageService.delete(filePath);
+            }
+          }
+
+          for (const version of upload.versions ?? []) {
+            const versionKey = version.fileKey?.trim();
+
+            if (versionKey) {
+              const versionPath = this.storageService.getAbsolutePath(
+                versionKey,
+              );
+  
+              if (versionPath) {
+                await this.storageService.delete(versionPath);
+              }
+            }
+          }
+        }
+
+        // Permanently delete upload versions
+        await queryRunner.manager.delete(UploadVersion, {
+          uploadId: In(uploadIds),
+        });
+
+        // Permanently delete uploads
+        await queryRunner.manager.delete(Upload, {
+          id: In(uploadIds),
+        });
+
+        await queryRunner.commitTransaction();
+
+        // Update cursor only after successful commit
+        lastId = uploads[uploads.length - 1].id;
+        totalDeleted += uploads.length;
+      } catch (error) {
+        if (queryRunner.isTransactionActive) {
+          await queryRunner.rollbackTransaction();
+        }
+
+        throw error;
+      } finally {
+        await queryRunner.release();
+      }
+    }
+
+    return totalDeleted;
   }
 }

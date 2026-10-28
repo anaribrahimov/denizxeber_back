@@ -11,6 +11,7 @@ import { UploadVersion } from "./upload-version.entity.js";
 import { PublicUploadController } from "./public/upload.controller.js";
 import { User } from "../users/user.entity.js";
 import { Post } from "../post/post.entity.js";
+import { UploadCleanupTask } from "./upload-cleanup.task.js";
 
 @Module({
   imports: [TypeOrmModule.forFeature([Upload, UploadVersion, User, Post])],
@@ -21,6 +22,7 @@ import { Post } from "../post/post.entity.js";
     MediaService, 
     ImageProcessorService,
     VideoProcessorService,
+    UploadCleanupTask,
   ],
   exports: [UploadService],
 })
