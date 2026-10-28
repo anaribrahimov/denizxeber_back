@@ -48,7 +48,7 @@ export class SubscriberService {
       .where('s.langId IN (:...langIds)', { langIds })
 
     if (email?.trim()) {
-      qb.where('s.email = :email', { email: `%${email.trim()}%` })
+      qb.where('s.email LIKE :email', { email: `%${email.trim()}%` })
     }
 
     qb
@@ -84,5 +84,13 @@ export class SubscriberService {
     }
 
     await this.subscriberRepository.delete(id);
+  }
+
+  async unsubscribe(token: string): Promise<void> {
+    // remove subscriber
+    await this.subscriberRepository
+      .delete({
+        unsubscribeToken: token
+      });
   }
 }

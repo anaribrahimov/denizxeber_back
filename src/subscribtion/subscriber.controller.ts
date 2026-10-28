@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseIntPipe, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, ParseIntPipe, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { SubscriberService } from "./subscriber.service.js";
 import { Public } from "../auth/decorators/public.decorator.js";
@@ -25,6 +25,20 @@ export class SubscriberController {
   constructor(
     private readonly subscriberService: SubscriberService,
   ) { }
+
+  @Get('/unsubscribe/:token')
+  @Public()
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Unsubscribed successfully',
+    summary: 'Unsubscribed successfully',
+  })
+  @HttpCode(HttpStatus.OK)
+  async unsubscribe(
+    @Param('token') token: string
+  ): Promise<void> {
+    await this.subscriberService.unsubscribe(token);
+  }
 
   @Public()
   @Post()

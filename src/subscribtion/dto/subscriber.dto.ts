@@ -9,4 +9,6 @@ export class SubscriberDto {
   language: LanguageDto;
 
   createdAt: Date;
+
+  unsubscribeToken: string;
 }

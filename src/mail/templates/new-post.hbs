@@ -114,19 +114,19 @@
             </td>
           </tr>
 
-          {{!-- <!-- Footer -->
+          <!-- Footer -->
           <tr>
             <td style="padding:24px 32px;background:#f9fafb;border-top:1px solid #e5e7eb;">
               <p style="margin:0 0 8px;text-align:center;font-size:12px;line-height:1.6;color:#6b7280;">
-                You're receiving this email because you subscribed to post updates.
+                {{t 'emails.email_whyReceiveAnswer'}}.
               </p>
               <p style="margin:0;text-align:center;font-size:12px;color:#6b7280;">
-                <a href="{{unsubscribe_url}}" style="color:#6b7280;">Unsubscribe</a>
+                <a href="{{unsubscribeUrl}}" style="color:#6b7280;">{{t 'emails.email_unsubscribe'}}</a>
                 &nbsp;·&nbsp;
-                <a href="{{privacy_url}}" style="color:#6b7280;">Privacy Policy</a>
+                {{!-- <a href="{{privacy_url}}" style="color:#6b7280;">Privacy Policy</a> --}}
               </p>
             </td>
-          </tr> --}}
+          </tr>
 
         </table>
 

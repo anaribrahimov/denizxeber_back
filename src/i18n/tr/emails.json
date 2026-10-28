@@ -8,5 +8,7 @@
   "email_copyLinkHint": "Düğme çalışmıyorsa bu bağlantıyı kopyalayıp tarayıcınızın adres çubuğuna yapıştırın",
   "email_communityThanks": "Topluluğumuzun bir parçası olduğunuz için teşekkür ederiz",
   "common_regards": "Saygılarımızla",
-  "common_team": "Ekibimiz"
+  "common_team": "Ekibimiz",
+  "email_whyReceiveAnswer": "Bu e-postayı gönderi güncellemelerine abone olduğunuz için alıyorsunuz",
+  "email_unsubscribe": "Abunetlikden çık"
 }

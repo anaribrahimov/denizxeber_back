@@ -9,7 +9,7 @@ import { SubscriberDto } from '../subscribtion/dto/subscriber.dto.js';
 
 export interface PostEmailJobData {
   to: string;
-  // unsubscribeToken: string;
+  unsubscribeToken: string;
   title: string;
   url: string;
   excerpt: string;
@@ -46,7 +46,7 @@ export class MailService {
           name: SEND_POST_EMAIL_JOB,
           data: {
             to: s.email,
-            // unsubscribeToken: s.unsubscribeToken,
+            unsubscribeToken: s.unsubscribeToken,
             title: event.title,
             url: event.url,
             excerpt: event.excerpt,

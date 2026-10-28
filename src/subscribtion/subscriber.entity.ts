@@ -6,6 +6,7 @@ import { Language } from "../language/language.entity.js";
   unique: true,
 })
 @Index('IDX_subscribers_lang', ['langId'])
+@Index('UK_subscribers_unsubscribe_token', ['unsubscribeToken'])
 export class Subscriber {
 
   @PrimaryGeneratedColumn()
@@ -30,6 +31,14 @@ export class Subscriber {
     default: () => 'CURRENT_TIMESTAMP',
   })
   createdAt: Date;
+
+  @Column({
+    name: 'unsubscribe_token',
+    type: 'varchar',
+    length: 100,
+    nullable: false,
+  })
+  unsubscribeToken: string;
 
   /* ------------------------- Relations ------------------------- */
 

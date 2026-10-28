@@ -8,5 +8,7 @@
   "email_copyLinkHint": "If the button doesn't work, copy and paste this link into your browser",
   "email_communityThanks": "Thanks for being part of our community",
   "common_regards": "Best regards",
-  "common_team": "Team"
+  "common_team": "Team",
+  "email_whyReceiveAnswer": "You're receiving this email because you subscribed to post updates",
+  "email_unsubscribe": "Unsubscribe"
 }

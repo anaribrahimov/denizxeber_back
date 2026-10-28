@@ -30,9 +30,12 @@ export class MailProcessor extends WorkerHost {
       createdAt,
       url,
       languageName,
+      unsubscribeToken,
     } = job.data;
+
     const appName = this.config.get<string>(`app.publicName.${languageName}`);
     const appUrl = this.config.get<string>(`app.publicUrl.${languageName}`);
+    const apiUrl = this.config.get<string>('app.url');
 
     const subject = this.i18nService.t(
         'emails.post_published_badge', { 
@@ -40,6 +43,8 @@ export class MailProcessor extends WorkerHost {
         }
       )
       + ': ' + excerpt;
+
+    const unsubscribeUrl = `${(appUrl ?? apiUrl)}/subscribers/unsubscribe/${unsubscribeToken}`;
 
     await this.mailer.sendMail({
       to,
@@ -54,12 +59,12 @@ export class MailProcessor extends WorkerHost {
         postExcerpt: excerpt,
         postUrl: url,
         postCoverImageUrl: coverImageOriginal,
-        // unsubscribeUrl: `${appUrl}/subscribers/unsubscribe/${unsubscribeToken}`,
+        unsubscribeUrl,
       },
-      // headers: {
+      headers: {
         // Helps Gmail/Outlook show a native "Unsubscribe" button
-        // 'List-Unsubscribe': `<${appUrl}/subscribers/unsubscribe/${unsubscribeToken}>`,
-      // },
+        'List-Unsubscribe': unsubscribeUrl,
+      },
     });
 
     this.logger.debug(`Sent "${title}" to ${to}`);
