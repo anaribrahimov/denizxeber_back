@@ -1,6 +1,7 @@
 import {
   Column,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -8,13 +9,8 @@ import {
 } from 'typeorm';
 import { Upload } from './upload.entity.js';
 
-export enum UploadVersionType {
-  SMALL  = 'small',
-  MEDIUM = 'medium',
-  LARGE  = 'large',
-}
-
 @Entity('upload_versions')
+@Index('idx_upload_versions_upload_id', ['uploadId'])
 export class UploadVersion {
   @PrimaryGeneratedColumn({
     type: 'bigint',
@@ -23,18 +19,10 @@ export class UploadVersion {
   id: number;
 
   @Column({
-    type: 'enum',
-    enum: UploadVersionType,
-    default: UploadVersionType.SMALL
-  })
-  version: UploadVersionType = UploadVersionType.SMALL;
-
-  @Column({
     name: 'upload_id',
     type: 'bigint',
     unsigned: true
   })
-  @Unique('uk_upload_versions_ui_v', ['upload_id', 'version'])
   uploadId: number;
 
   @Column({
