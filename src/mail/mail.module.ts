@@ -33,7 +33,8 @@ import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
           },
         },
         defaults: { 
-          from: `"My Blog" <${config.getOrThrow('mail.from')}>` 
+          // from: `"My Blog" <${config.getOrThrow('mail.from')}>` 
+          from: `<${config.getOrThrow('mail.from')}>` 
         },
         template: {
           dir: join(import.meta.dirname, 'templates'),

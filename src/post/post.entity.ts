@@ -62,13 +62,13 @@ export class Post {
 
   @Column({
     type: 'varchar',
-    length: 200,
+    length: 600,
   })
   title: string;
 
   @Column({
     type: 'varchar',
-    length: 255,
+    length: 300,
     unique: true,
   })
   slug: string;

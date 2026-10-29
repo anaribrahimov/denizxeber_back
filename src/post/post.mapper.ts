@@ -86,7 +86,7 @@ export class PostMapper {
     post.statusId = createPostDto.statusId ?? null;
     post.coverImageId = createPostDto.coverImageId ?? null;
     post.title = createPostDto.title;
-    post.slug = `${slug(createPostDto.title)}-${Date.now()}`;
+    post.slug = `${slug(createPostDto.title.slice(0, 200))}-${Date.now()}`;
     post.content = createPostDto.content;
     post.priorityId = createPostDto.priorityId ?? null;
     return post;

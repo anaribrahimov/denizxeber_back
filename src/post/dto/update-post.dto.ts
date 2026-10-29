@@ -57,7 +57,7 @@ export class UpdatePostDto {
   @Transform(({ value }) => typeof value === 'string' ? value?.trim() : value)
   @IsOptional()
   @IsString()
-  @MaxLength(255)
+  @MaxLength(600)
   title?: string;
 
   @IsOptional()

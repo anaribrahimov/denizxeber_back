@@ -56,7 +56,7 @@ export class CreatePostDto {
   @Transform(({ value }) => typeof value === 'string' ? value?.trim() : value)
   @IsNotEmpty()
   @IsString()
-  @MaxLength(255)
+  @MaxLength(600)
   title: string;
 
   @IsNotEmpty()
