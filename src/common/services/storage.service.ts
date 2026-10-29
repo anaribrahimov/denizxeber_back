@@ -21,6 +21,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createReadStream, existsSync } from 'node:fs';
 import { FileRange } from '../interfaces/file-stream.interface.js';
+import mime from 'mime-types';
 
 @Injectable()
 export class StorageService {
@@ -178,5 +179,9 @@ export class StorageService {
       throw new NotFoundException('File not found'); // path traversal guard
     }
     return filePath;
+  }
+
+  getMimeTypeFromExtension(name: string): string {
+    return mime.lookup(name) || 'application/octet-stream';
   }
 }

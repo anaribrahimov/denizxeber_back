@@ -17,6 +17,7 @@ import { User } from "../users/user.entity.js";
 import { Post } from "../post/post.entity.js";
 import { StatusEnum } from "../status/status.cache.js";
 import dayjs from "dayjs";
+import { stat } from "fs/promises";
 
 @Injectable()
 export class UploadService {
@@ -456,5 +457,90 @@ export class UploadService {
     }
 
     return totalDeleted;
+  }
+
+  async readFileWP(
+    fileKey: string,
+    rangeHeader: string | undefined | null,
+  ): Promise<ReadFileResult> {
+    if (fileKey.includes('..')) {
+      throw new NotFoundException('File not found');
+    }
+    
+    if (!fileKey.startsWith('wp-')) {
+      throw new NotFoundException('File not found');
+    }
+
+    const absolutePath = this.storageService.getAbsolutePath(fileKey);
+
+    if (!this.storageService.exists(absolutePath)) {
+      throw new NotFoundException('File not found');
+    }
+
+    const fileStat = await stat(absolutePath);
+
+    const mimetype: string = this.storageService.getMimeTypeFromExtension(absolutePath);
+    let sizeByte: number|null = fileStat.size;
+    let durationSec: number | null = null;
+
+
+    console.log({
+      mimetype,
+      sizeByte,
+      durationSec,
+    })
+    console.log('filestat', fileStat.isFile());
+
+    // if (upload.fileKey === fileKey) {
+    //   mimetype = upload.fileMimeType;
+    //   sizeByte = upload.fileSizeByte;
+    //   durationSec = upload.durationSec ?? null;
+    // } else {
+    //   const version: UploadVersion | undefined = upload.versions?.find(
+    //     (v) => v.fileKey === fileKey,
+    //   );
+
+    //   if (!version) {
+    //     throw new NotFoundException('File not found');
+    //   }
+
+    //   mimetype = version.fileMimeType;
+    //   sizeByte = version.fileSizeByte;
+    // }
+
+    // if (!sizeByte) {
+    //   sizeByte = await this.storageService.getFileSizeByte(filePath);
+    // }
+
+    const range = parseRangeHeader(rangeHeader, sizeByte);
+
+    if (!range) {
+      const stream = this.storageService.readFileStream(fileKey);
+      return {
+        stream,
+        mimetype,
+        sizeByte,
+        durationSec,
+        start: 0,
+        end: sizeByte - 1,
+        status: 200,
+      };
+    }
+
+    const { start, end } = range;
+    if (start < 0 || end >= sizeByte || start > end) {
+      throw new RangeNotSatisfiableException(sizeByte);
+    }
+
+    const stream = this.storageService.readFileStream(fileKey, { start, end });
+    return {
+      stream,
+      mimetype,
+      sizeByte,
+      durationSec,
+      start,
+      end,
+      status: 206,
+    };
   }
 }

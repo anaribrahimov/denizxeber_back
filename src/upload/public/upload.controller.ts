@@ -69,4 +69,47 @@ export class PublicUploadController {
       }
     });
   }
+
+  @Get('/wp-content/uploads/*fileKey')
+  public async readFileWP(
+    @Param('fileKey') params: string[],
+    @Headers('range') rangeHeader: string | undefined,
+    @Res() res: any,
+  ) {
+    const fileKey = Array.isArray(params) ? params.join('/') : null;
+    if (!fileKey?.trim()) {
+      throw new NotFoundException();
+    }
+
+    // console.log('range header', rangeHeader);
+
+    let result: ReadFileResult;
+    try {
+      result = await this.uploadService.readFileWP(fileKey, rangeHeader);
+    } catch (err) {
+      if (err instanceof RangeNotSatisfiableException) {
+        res.writeHead(416, { 'Content-Range': `bytes */${err.sizeByte}` });
+        res.end();
+        return;
+      }
+      throw err;
+    }
+
+    const { stream, mimetype, sizeByte, start, end, status } = result;
+
+    res.writeHead(status, {
+      'Content-Type': mimetype,
+      'Content-Length': end - start + 1,
+      'Accept-Ranges': 'bytes',
+      ...(status === 206 ? { 'Content-Range': `bytes ${start}-${end}/${sizeByte}` } : {}),
+    });
+
+    stream.pipe(res);
+
+    res.on('close', () => {
+      if (typeof (stream as any).destroy === 'function') {
+        (stream as any).destroy();
+      }
+    });
+  }
 }
