@@ -1,6 +1,6 @@
 import { Upload, UploadType } from "./upload.entity.js";
 import { UploadResponseDto } from "./dto/upload-response.dto.js";
-import { UploadVersion, UploadVersionType } from "./upload-version.entity.js";
+import { UploadVersion } from "./upload-version.entity.js";
 import { UploadVersionResponseDto } from "./dto/upload-version-response.dto.js";
 import { createPreviewUrl } from "../common/utils/media.util.js";
 import { UploadOwnerDto } from "./dto/upload-owner.dto.js";
@@ -9,7 +9,6 @@ export class UploadMapper {
 
   public static toUploadVersionEntity(
     upload: Upload,
-    version: UploadVersionType,
     fileName: string,
     fileMimeType: string,
     fileKey: string,
@@ -19,7 +18,6 @@ export class UploadMapper {
   ): UploadVersion {
     const uploadVersion = new UploadVersion();
     uploadVersion.uploadId = upload.id;
-    uploadVersion.version = version;
     uploadVersion.fileName = fileName;
     uploadVersion.fileMimeType = fileMimeType;
     uploadVersion.fileKey = fileKey;
@@ -76,7 +74,6 @@ export class UploadMapper {
       upload.versions?.map(
         (uploadVersion: UploadVersion) => ({
           id: uploadVersion.id,
-          version: uploadVersion.version,
           fileName: uploadVersion.fileName,
           fileKey: uploadVersion.fileKey,
           fileWidth: uploadVersion.fileWidth,

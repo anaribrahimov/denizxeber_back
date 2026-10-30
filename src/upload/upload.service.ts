@@ -5,7 +5,7 @@ import { StorageService } from "../common/services/storage.service.js";
 import { UploadMapper } from "./upload.mapper.js";
 import { InjectRepository } from "@nestjs/typeorm";
 import { DataSource, In, IsNull, LessThan, MoreThan, Not, QueryRunner, Repository } from "typeorm";
-import { UploadVersion, UploadVersionType } from "./upload-version.entity.js";
+import { UploadVersion } from "./upload-version.entity.js";
 import { parseRangeHeader } from "../common/utils/range.util.js";
 import { RangeNotSatisfiableException } from "../common/exceptions/range-not-satisfiable.exception.js";
 import { ReadFileResult } from "../common/interfaces/file-stream.interface.js";
@@ -69,7 +69,6 @@ export class UploadService {
     if (processedFile.thumbnailKey) {
       const version: UploadVersion = UploadMapper.toUploadVersionEntity(
         upload,
-        UploadVersionType.SMALL,
         processedFile.thumbnailFilename!,
         processedFile.thumbnailMimeType!,
         processedFile.thumbnailKey,
