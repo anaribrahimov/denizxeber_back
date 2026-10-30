@@ -1,6 +1,7 @@
 import {
   Injectable,
 } from '@nestjs/common';
+import path from 'path';
 import sharp from 'sharp';
 
 export const THUMBNAIL_SIZE = 300;
@@ -17,6 +18,8 @@ export interface ThumbnailResult {
   height: number;
   size: number;
   format: string;
+  thumbnailName: string;
+  thumbnailPath: string;
 }
 
 @Injectable()
@@ -46,7 +49,8 @@ export class ImageProcessorService {
 
   async createThumbnail(
     sourcePath: string,
-    destinationPath: string,
+    // destinationPath: string,
+    destinationDir: string
   ): Promise<ThumbnailResult> {
     const metadata =
       await sharp(sourcePath)
@@ -59,13 +63,25 @@ export class ImageProcessorService {
         .webp({
           quality: THUMBNAIL_QUALITY,
         })
-        .toFile(destinationPath);
+        // .toFile(destinationPath);
+        .toBuffer({ resolveWithObject: true });
+
+    const { width, height, size, format } = metadata.info;
+
+    const ext = path.extname(sourcePath);
+    const basename = path.basename(sourcePath, ext);
+    const thumbnailName = `${basename}-${width}x${height}.webp`;
+    const thumbnailPath = path.join(destinationDir, thumbnailName);
+
+    await sharp(metadata.data).toFile(thumbnailPath);
 
     return {
-      width: metadata.width,
-      height: metadata.height,
-      size: metadata.size,
-      format: metadata.format,
+      width,
+      height,
+      size,
+      format,
+      thumbnailName,
+      thumbnailPath,
     };
   }
 }

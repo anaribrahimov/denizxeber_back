@@ -143,15 +143,18 @@ export class MediaService {
 
         await this.storageService.ensureDirectory(thumbnailDirectory);
 
-        thumbnailFilename = `${uuidv4()}.webp`;
+        // thumbnailFilename = `${uuidv4()}.webp`;
 
-        thumbnailPath = `${thumbnailDirectory}/${thumbnailFilename}`;
+        // thumbnailPath = `${thumbnailDirectory}/${thumbnailFilename}`;
 
-        const thumbnail = await this.imageProcessorService.createThumbnail(file.path, thumbnailPath);
-
+        // const thumbnail = await this.imageProcessorService.createThumbnail(file.path, thumbnailPath);
+        const thumbnail = await this.imageProcessorService
+          .createThumbnail(file.path, thumbnailDirectory);
         thumbnailWidth = thumbnail?.width ?? null;
         thumbnailHeight = thumbnail?.height ?? null;
         thumbnailSizeInBytes = thumbnail?.size ?? null;
+        thumbnailFilename = thumbnail.thumbnailName;
+        thumbnailPath = thumbnail.thumbnailPath;
       }
 
       /*
@@ -159,8 +162,6 @@ export class MediaService {
        */
 
       await this.storageService.move(file.path, permanentPath);
-      
-      // throw new Error('Test error');
 
       /*
        * 6. Return domain data
