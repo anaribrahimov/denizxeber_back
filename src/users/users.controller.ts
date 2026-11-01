@@ -18,10 +18,9 @@ import { CommonErrorDto } from "../common/dto/common-error.dto.js";
 import { ApiDataResponse } from "../common/decorators/api-data-response.decorator.js";
 import { AppApiResponse } from "../common/interfaces/app-api-response.interface.js";
 import { ApiPaginatedResponse } from "../common/decorators/api-paginated-response.decorator.js";
+import { UpdateProfileRequestDto } from "./dto/update-profile-request.dto.js";
 
 @Controller('/users')
-@UseGuards(RolesGuard)
-@Roles('Admin')
 @ApiTags('Users')
 @ApiResponse({ 
   status: HttpStatus.UNAUTHORIZED, 
@@ -37,6 +36,8 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
   @ApiOperation({ summary: 'Create a new user' })
   @ApiConsumes('multipart/form-data')
   @ApiDataResponse(
@@ -97,7 +98,64 @@ export class UsersController {
     };
   }
 
+  @Patch('/me')
+  @ApiDataResponse( 
+    UserResponseDTO,
+    HttpStatus.OK,
+    'Profile updated successfully',
+    ''
+  )
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Bad request',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({
+    status: 422,
+    description: 'Unprocessable entity',
+    type: CommonErrorDto,
+  })
+  @ApiResponse({
+    status: 413,
+    description: 'Payload too large',
+    type: CommonErrorDto,
+  })
+  @UseInterceptors(
+    FileInterceptor('profileImage', {
+      storage: multerStorageConfig('profile-images'),
+      fileFilter: profileImageFileFilter,
+      limits: { fileSize: MAX_IMAGE_SIZE },
+    }),
+    FileCleanupInterceptor,
+  )
+  async updateProfile(
+    @Body() dto: UpdateProfileRequestDto,
+    @CurrentUser() currentUser: AuthUser,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({ 
+          fileType: /(jpg|jpeg|png|webp)$/,
+          skipMagicNumbersValidation: true,
+          errorMessage: 'Only JPEG, PNG or WEBP images are allowed'
+        })
+        .addMaxSizeValidator({ maxSize: MAX_IMAGE_SIZE })
+        .build({
+          fileIsRequired: false,
+          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+        }),
+    )
+    profileImage?: Express.Multer.File,
+  ): Promise<AppApiResponse<UserResponseDTO>> {
+    const updated: UserResponseDTO = 
+      await this.usersService
+        .updateProfile(dto, currentUser, profileImage);
+    return { data: updated };
+  }
+
   @Patch('/:id')
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
   @ApiDataResponse( 
     UserResponseDTO,
     HttpStatus.OK,
@@ -154,6 +212,8 @@ export class UsersController {
   }
 
   @Delete('/:id')
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
   @ApiResponse({ status: 204, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -164,6 +224,8 @@ export class UsersController {
   }
 
   @Get('/:id')
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
   @ApiDataResponse( 
     UserResponseDTO,
     HttpStatus.OK,
@@ -179,6 +241,8 @@ export class UsersController {
   }
 
   @Get()
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
   @ApiPaginatedResponse(UserResponseDTO)
   async findPaginated(
     @Query() query: PaginateUserDto

@@ -20,6 +20,7 @@ import { UploadService } from '../upload/upload.service.js';
 import { Post } from '../post/post.entity.js';
 import { StatusEnum } from '../status/status.cache.js';
 import { StorageService } from '../common/services/storage.service.js';
+import { UpdateProfileRequestDto } from './dto/update-profile-request.dto.js';
 
 @Injectable()
 export class UsersService {
@@ -284,6 +285,112 @@ export class UsersService {
     }
   }
 
+  async updateProfile(
+    dto: UpdateProfileRequestDto, 
+    authUser: AuthUser,
+    profileImage?: Express.Multer.File,
+  ): Promise<UserResponseDTO> {
+    if (!profileImage && !Object.values(dto).filter((item) => item !== undefined).length) {
+      throw new ValidationException({}, 'Not any params sent to update');
+    }
+
+    let processedFile: ProcessedFileResult | null = null;
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    const { userId: id } = authUser;
+
+    try {
+      // find the user and lock the row for update
+      const user: User | null = await queryRunner.manager.findOne(User, {
+        where: {
+          id: id,
+        },
+        lock: {
+          mode: 'pessimistic_write'
+        }
+      });
+
+      if (!user) throw new NotFoundException('User not found: ' + id);
+
+      const languages = await queryRunner.manager.find(Language);
+
+      const errors: Record<string, string[]> = {};
+
+      if (dto.firstName && dto.firstName != user.firstName) {
+        user.firstName = dto.firstName;
+      }
+      
+      if (dto.lastName && dto.lastName != user.lastName) {
+        user.lastName = dto.lastName;
+      }
+
+      if (Object.keys(errors).length) {
+        throw new ValidationException(errors);
+      }
+
+      if (profileImage) {
+        processedFile = await this.uploadService.processFile(profileImage);
+      }
+
+      if (processedFile || dto.removeProfileImage) {
+        if (user.profileImageId) {
+          // remove current upload record
+          await queryRunner.manager.softDelete(Upload, user.profileImageId);
+          user.profileImage = null;
+          user.profileImageId = null;
+        }
+
+        if (processedFile) {
+          const savedUpload: Upload = 
+            await this.uploadService
+              .saveUploadTransactional(
+                processedFile, 
+                queryRunner, 
+                UploadType.PRIVATE,
+                authUser.userId
+              );
+          user.profileImage = savedUpload;
+        }
+      }
+
+      if (dto.password) {
+        user.password = await hashPassword(dto.password);
+      }
+
+      // save user
+      await queryRunner.manager.save(user);
+
+      const updatedUser = await queryRunner.manager.findOne(User, {
+        where: {
+          id,
+        },
+        relations: {
+          role: true,
+          profileImage: {
+            versions: true
+          }
+        }
+      });
+
+      // console.log('updated user', updatedUser);
+
+      await queryRunner.commitTransaction(); // commit transaction
+
+      return UserMapper.toResponseDTO(updatedUser!, languages, this.publicUrl, null, null);
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      if (processedFile) {
+        await this.uploadService.deleteProcessedFile(processedFile);
+      }
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
   async delete(id: number, authUser: AuthUser): Promise<void> {
     const queryRunner = this.dataSource.createQueryRunner();
 
@@ -341,42 +448,14 @@ export class UsersService {
 
     const languages: Language[] = await this.languageRepository.find();
 
-    const counts = await this.usersRepository
-      .createQueryBuilder('users')
-      .select('users.id', 'userId')
-      .addSelect(
-        `(
-          SELECT COUNT(*)
-          FROM posts post
-          WHERE post.author_id = users.id
-            AND post.status_id = :draftStatus
-            AND post.deleted_at IS NULL
-        )`,
-        'draftPostCount',
-      )
-      .addSelect(
-        `(
-          SELECT COUNT(*)
-          FROM posts post
-          WHERE post.author_id = users.id
-            AND post.status_id = :publishedStatus
-            AND post.deleted_at IS NULL
-        )`,
-        'publishedPostCount',
-      )
-      .where('users.id = :id', { id })
-      .setParameters({
-        draftStatus: StatusEnum.Draft,
-        publishedStatus: StatusEnum.Published,
-      })
-      .getRawOne();
+    const { totalDraft, totalPublished } = await this.countUserPosts(id);
 
     return UserMapper.toResponseDTO(
       user, 
       languages, 
       this.publicUrl, 
-      Number(counts.publishedPostCount ?? 0), 
-      Number(counts.draftPostCount ?? 0),
+      totalPublished, 
+      totalDraft,
     );
   }
 
@@ -475,5 +554,44 @@ export class UsersService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  async countUserPosts(
+    userId: number,
+  ): Promise<{ totalPublished: number, totalDraft: number }> {
+    const counts = await this.usersRepository
+      .createQueryBuilder('users')
+      .select('users.id', 'userId')
+      .addSelect(
+        `(
+          SELECT COUNT(*)
+          FROM posts post
+          WHERE post.author_id = users.id
+            AND post.status_id = :draftStatus
+            AND post.deleted_at IS NULL
+        )`,
+        'draftPostCount',
+      )
+      .addSelect(
+        `(
+          SELECT COUNT(*)
+          FROM posts post
+          WHERE post.author_id = users.id
+            AND post.status_id = :publishedStatus
+            AND post.deleted_at IS NULL
+        )`,
+        'publishedPostCount',
+      )
+      .where('users.id = :userId', { userId })
+      .setParameters({
+        draftStatus: StatusEnum.Draft,
+        publishedStatus: StatusEnum.Published,
+      })
+      .getRawOne();
+
+    return {
+      totalPublished: Number(counts.publishedPostCount ?? 0),
+      totalDraft: Number(counts.draftPostCount ?? 0),
+    }
   }
 }
