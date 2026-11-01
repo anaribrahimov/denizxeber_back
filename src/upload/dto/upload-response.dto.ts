@@ -24,7 +24,7 @@ export class UploadResponseDto {
   mimeType: string;
 
   @ApiProperty()
-  fileSizeByte: number;
+  fileSizeByte: number | null;
 
   @ApiProperty()
   fileWidth: number|null;
