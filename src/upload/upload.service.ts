@@ -152,6 +152,8 @@ export class UploadService {
 
     } catch (err) {
 
+      await queryRunner.rollbackTransaction();
+
       if (processedFile) {
         await this.deleteProcessedFile(processedFile);
       }
