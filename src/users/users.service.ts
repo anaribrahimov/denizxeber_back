@@ -414,8 +414,7 @@ export class UsersService {
     if (search) {
       qb.andWhere(
         `(
-          users.email LIKE :search
-          OR users.first_name LIKE :search
+          users.first_name LIKE :search
           OR users.last_name LIKE :search
         )`,
         { search: `%${search}%` },
