@@ -1,10 +1,6 @@
 import { Role } from "../../roles/role.entity.js";
 import { Language } from "../../language/language.entity.js";
-
-export class UserProfileImageResult {
-  originalUrl?: string;
-  thumbnailUrl?: string | null;
-}
+import { ProfileImageResponseDto } from "./profile-image-response.dto.js";
 
 export class UserResponseDTO {
   id: number;
@@ -16,7 +12,7 @@ export class UserResponseDTO {
   createdAt: Date;
   updatedAt?: Date | null;
   isActive: boolean;
-  profileImage: UserProfileImageResult | null;
+  profileImage: ProfileImageResponseDto | null;
   publishedPostCount?: number | null;
   draftPostCount?: number | null;
 }

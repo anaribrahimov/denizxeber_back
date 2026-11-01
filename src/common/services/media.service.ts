@@ -1,6 +1,7 @@
 import {
   Injectable,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { v4 as uuidv4 } from 'uuid';
 import { ImageProcessorService } from './image-processor.service.js';
@@ -25,24 +26,55 @@ export interface ProcessedFileResult {
 
   durationInSec?: number | null,
 
-  thumbnailPath: string | null,
-
-  thumbnailFilename: string | null,
-
-  thumbnailMimeType: string | null,
-
-  thumbnailKey: string | null,
-
-  thumbnailSizeInBytes: number|null,
-  thumbnailWidth: number|null,
-  thumbnailHeight: number|null,
+  versions: UploadVersionItem[];
 }
+
+export interface UploadVersionItem {
+  path: string;
+  fileName: string;
+  mimeType: string;
+  fileKey: string;
+  width: number;
+  height: number;
+  size: number; 
+  versionName: string,
+}
+
+interface UploadVersionSettingValue {
+  width: number;
+  height: number;
+  quality?: number | null;
+}
+
+export const UploadVersionSettings: Record<string, UploadVersionSettingValue> = Object.freeze({
+  thumbnail: {
+    width: 150,
+    height: 150,
+    quality: 75
+  },
+  small: {
+    width: 300,
+    height: 300,
+    quality: 80,
+  },
+  medium: {
+    width: 640,
+    height: 640,
+    quality: 82
+  },
+  large: {
+    width: 1280,
+    height: 1280,
+    quality: 85,
+  },
+});
 
 @Injectable()
 export class MediaService {
 
   private readonly appUrl: string;
   private readonly filesPublicUrl: string;
+  private readonly logger = new Logger(MediaService.name);
 
   constructor(
     private readonly storageService: StorageService,
@@ -55,13 +87,55 @@ export class MediaService {
       this.configService.getOrThrow<string>('app.filesPublicUrl');
   }
 
+  private async processUploadVersions(
+    filePath: string,
+    fileWidth: number | null,
+    fileHeight: number | null,
+    destinationDir: string,
+  ): Promise<UploadVersionItem[]> {
+    const versions: UploadVersionItem[] = [];
+    
+    for (const versionName of Object.keys(UploadVersionSettings)) {
+      
+      const versionSetting: UploadVersionSettingValue = 
+        UploadVersionSettings[versionName];
+      
+      if (!this.imageProcessorService
+        .needsVersion(fileWidth, fileHeight, versionSetting.width, versionSetting.height)) {
+        continue;
+      }
+
+      const version = await this.imageProcessorService
+        .resize(
+          filePath,
+          destinationDir,
+          versionSetting.width,
+          versionSetting.height,
+          versionSetting.quality ?? null
+        );
+
+      versions.push({
+        path: version.filePath,
+        fileName: version.fileName,
+        fileKey: this.storageService.getRelativePath(version.filePath),
+        width: version.width,
+        height: version.height,
+        size: version.size,
+        mimeType: version.mimeType,
+        versionName,
+      })
+    }
+
+    return versions;
+  }
+
   async processUpload(file: Express.Multer.File): Promise<ProcessedFileResult> {
     const isImage = file.mimetype.startsWith('image/');
 
     const isVideo = file.mimetype.startsWith('video/');
 
     if (!isImage && !isVideo) {
-      await this.storageService.delete(file.path);
+      // await this.storageService.delete(file.path);
       throw new BadRequestException('Unsupported file type');
     }
 
@@ -70,15 +144,9 @@ export class MediaService {
 
     let durationInSec: number | null = null;
 
-    let thumbnailPath: string | null = null;
-
     let permanentPath: string | null = null;
 
-    let thumbnailMimeType = 'image/webp';
-    let thumbnailFilename: string | null = null;
-    let thumbnailSizeInBytes: number|null = null;
-    let thumbnailWidth: number|null = null;
-    let thumbnailHeight: number|null = null;
+    const versions: UploadVersionItem[] = [];
 
     try {
       /*
@@ -129,32 +197,19 @@ export class MediaService {
       // console.log('mimetype', file.mimetype);
 
       /*
-       * 4. Generate thumbnail
+       * 4. Generate versions
        */
 
       if (
         isImage
         && file.mimetype !== 'image/gif'
-        && this.imageProcessorService.needsThumbnail(width, height)
       ) {
-        const thumbnailDirectory = `${directory}/thumbs`;
-
-        // console.log('thumbnail directory', thumbnailDirectory);
-
-        await this.storageService.ensureDirectory(thumbnailDirectory);
-
-        // thumbnailFilename = `${uuidv4()}.webp`;
-
-        // thumbnailPath = `${thumbnailDirectory}/${thumbnailFilename}`;
-
-        // const thumbnail = await this.imageProcessorService.createThumbnail(file.path, thumbnailPath);
-        const thumbnail = await this.imageProcessorService
-          .createThumbnail(file.path, thumbnailDirectory);
-        thumbnailWidth = thumbnail?.width ?? null;
-        thumbnailHeight = thumbnail?.height ?? null;
-        thumbnailSizeInBytes = thumbnail?.size ?? null;
-        thumbnailFilename = thumbnail.thumbnailName;
-        thumbnailPath = thumbnail.thumbnailPath;
+        versions.push(...await this.processUploadVersions(
+          file.path,
+          width,
+          height,
+          directory
+        ))
       }
 
       /*
@@ -188,23 +243,7 @@ export class MediaService {
 
         durationInSec,
 
-        thumbnailPath,
-
-        thumbnailFilename, 
-
-        thumbnailMimeType,
-
-        thumbnailKey:
-          thumbnailPath
-            ? this.storageService
-                .getRelativePath(
-                  thumbnailPath!,
-                )
-            : null,
-
-        thumbnailSizeInBytes: thumbnailSizeInBytes,
-        thumbnailWidth,
-        thumbnailHeight,
+        versions,
       };
     } catch (error) {
       /*
@@ -215,16 +254,18 @@ export class MediaService {
         file.path,
       );
 
-      if (thumbnailPath) {
-        await this.storageService.delete(
-          thumbnailPath,
-        );
-      }
-
       if (permanentPath) {
         await this.storageService.delete(
           permanentPath,
         );
+      }
+
+      for (const version of versions) {
+        if (!version.path) {
+          continue;
+        }
+        this.logger.debug(`Deleting version file: ${version.path}`);
+        await this.storageService.delete(version.path);
       }
 
       throw error;

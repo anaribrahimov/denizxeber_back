@@ -66,9 +66,11 @@
                       {{postTitle}}
                     </h2>
 
+                    {{#if postCoverImageUrl}}
                     <p style="width: 552px; overflow: hidden">
                       <img src="{{postCoverImageUrl}}" alt="" style="max-width: 100%">
                     </p>
+                    {{/if}}
 
                     <p style="margin:0 0 16px;font-size:14px;color:#6b7280;">
                       {{t 'emails.common_by'}} {{authorFullName}} {{!-- · {{reading_time}} min read --}}

@@ -6,6 +6,8 @@ import { languages } from "../language/language.cache.js";
 import { statuses } from "../status/status.cache.js";
 import { createPreviewUrl } from "../common/utils/media.util.js";
 import { prioritiesCached } from "../priority/priority.cache.js";
+import { AuthProfileImageDto, AuthProfileImageVersionItemDto } from "./dto/auth-profile-image.dto.js";
+import { UploadVersion } from "../upload/upload-version.entity.js";
 
 export class AuthMapper {
 
@@ -69,6 +71,29 @@ export class AuthMapper {
   }
 
   public static toValidatedUserDto(user: User, publicUrl: string): ValidatedUserDto {
+    let profileImageDto: AuthProfileImageDto | null = null;
+    if (user.profileImage) {
+      profileImageDto = new AuthProfileImageDto();
+      profileImageDto.id = user.profileImage.id.toString();
+      profileImageDto.previewUrl = 
+        createPreviewUrl(publicUrl, user.profileImage.fileKey);
+      profileImageDto.width = user.profileImage.fileWidth;
+      profileImageDto.height = user.profileImage.fileHeight;
+      profileImageDto.size = user.profileImage.fileSizeByte;
+      profileImageDto.versions = [];
+      if (user.profileImage.versions?.length) {
+        user.profileImage.versions.forEach((item: UploadVersion) => {
+          profileImageDto?.versions.push({
+            version: item.version,
+            previewUrl: createPreviewUrl(publicUrl, item.fileKey),
+            width: item.fileWidth,
+            height: item.fileHeight,
+            size: item.fileSizeByte,
+          } as AuthProfileImageVersionItemDto);
+        })
+      }
+    }
+
     const dto = new ValidatedUserDto;
     dto.id = user.id;
     dto.email = user.email;
@@ -76,17 +101,7 @@ export class AuthMapper {
     dto.lastName = user.lastName;
     dto.role = user.role;
     dto.langIds = Array.isArray(user.langIds) ? user.langIds : [];
-
-    dto.profileImage =
-      user.profileImage 
-        ? {
-            originalUrl: createPreviewUrl(publicUrl, user.profileImage.fileKey),
-            thumbnailUrl: 
-              Array.isArray(user.profileImage.versions) && user.profileImage.versions.length
-                ? createPreviewUrl(publicUrl, user.profileImage.versions[0].fileKey)
-                : null
-          }
-        : null
+    dto.profileImage = profileImageDto;
 
     return dto;
   }

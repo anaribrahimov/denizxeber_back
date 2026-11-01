@@ -11,6 +11,7 @@ import { Upload } from './upload.entity.js';
 
 @Entity('upload_versions')
 @Index('idx_upload_versions_upload_id', ['uploadId'])
+@Index('uk_upload_versions_ui_v', ['uploadId', 'version'])
 export class UploadVersion {
   @PrimaryGeneratedColumn({
     type: 'bigint',
@@ -24,6 +25,14 @@ export class UploadVersion {
     unsigned: true
   })
   uploadId: number;
+
+  @Column({
+    name: 'version',
+    type: 'varchar',
+    length: 50,
+    nullable: false,
+  })
+  version: string;
 
   @Column({
     name: 'file_name',

@@ -15,6 +15,7 @@ export class UploadMapper {
     fileWidth: number|null,
     fileHeight: number|null,
     fileSizeByte: number|null,
+    version: string,
   ): UploadVersion {
     const uploadVersion = new UploadVersion();
     uploadVersion.uploadId = upload.id;
@@ -24,6 +25,7 @@ export class UploadMapper {
     uploadVersion.fileWidth = fileWidth;
     uploadVersion.fileHeight = fileHeight;
     uploadVersion.fileSizeByte = fileSizeByte;
+    uploadVersion.version = version;
     return uploadVersion;
   }
 
@@ -80,6 +82,7 @@ export class UploadMapper {
           fileHeight: uploadVersion.fileHeight,
           fileSizeByte: uploadVersion.fileSizeByte,
           preview: createPreviewUrl(publicUrl, uploadVersion.fileKey),
+          version: uploadVersion.version,
         })
       ) as UploadVersionResponseDto[] ?? [];
     dto.owner = upload.owner

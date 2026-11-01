@@ -1,4 +1,4 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException, Search } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto.js';
 import { User } from './user.entity.js';
 import { DataSource, Repository } from 'typeorm';
@@ -8,7 +8,6 @@ import { Language } from '../language/language.entity.js';
 import { UserMapper } from './user.mapper.js';
 import { UserResponseDTO } from './dto/user-response.dto.js';
 import { Upload, UploadType } from '../upload/upload.entity.js';
-import { deleteFile } from '../common/utils/storage.util.js';
 import { UpdateUserDTO } from './dto/update-user.dto.js';
 import { hashPassword } from '../common/utils/auth.util.js';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -20,6 +19,7 @@ import { ProcessedFileResult } from '../common/services/media.service.js';
 import { UploadService } from '../upload/upload.service.js';
 import { Post } from '../post/post.entity.js';
 import { StatusEnum } from '../status/status.cache.js';
+import { StorageService } from '../common/services/storage.service.js';
 
 @Injectable()
 export class UsersService {
@@ -60,10 +60,6 @@ export class UsersService {
     await queryRunner.startTransaction();
 
     try {
-      if (profileImage) {
-        processedFile = await this.uploadService.processFile(profileImage);
-      }
-
       // find user
       const user = await queryRunner.manager
         .exists(
@@ -104,17 +100,23 @@ export class UsersService {
 
       if (Object.keys(errors).length) throw new ValidationException(errors);
 
-      // save profile image
-      const savedUpload: Upload | null = 
-        processedFile 
-          ? await this.uploadService
-              .saveUploadTransactional(
-                processedFile, 
-                queryRunner, 
-                UploadType.PRIVATE, 
-                userPrincipal.userId
-              ) 
-          : null;
+      let savedUpload: Upload | null = null;
+
+      if (profileImage) {
+        processedFile = await this.uploadService.processFile(profileImage);
+        
+        // save profile image
+        savedUpload = 
+          processedFile
+            ? await this.uploadService
+                .saveUploadTransactional(
+                  processedFile, 
+                  queryRunner, 
+                  UploadType.PRIVATE, 
+                  userPrincipal.userId
+                ) 
+            : null;
+      }
 
       const newUser = await UserMapper.toEntity(dto, role!, savedUpload);
 
@@ -136,14 +138,8 @@ export class UsersService {
       );
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      if (profileImage) {
-        await deleteFile(profileImage.path);
-      }
-      if (processedFile && processedFile?.path) {
-        await deleteFile(processedFile!.path);
-        if (processedFile?.thumbnailPath) {
-          await deleteFile(processedFile.thumbnailPath);
-        }
+      if (processedFile) {
+        await this.uploadService.deleteProcessedFile(processedFile);
       }
       throw err;
     } finally {
@@ -168,10 +164,6 @@ export class UsersService {
     await queryRunner.startTransaction();
 
     try {
-      if (profileImage) {
-        processedFile = await this.uploadService.processFile(profileImage);
-      }
-
       // find the user and lock the row for update
       const user: User | null = await queryRunner.manager.findOne(User, {
         where: {
@@ -232,6 +224,10 @@ export class UsersService {
 
       if (Object.keys(errors).length) throw new ValidationException(errors);
 
+      if (profileImage) {
+        processedFile = await this.uploadService.processFile(profileImage);
+      }
+
       if (processedFile || dto.removeProfileImage) {
         if (user.profileImageId) {
           // remove current upload record
@@ -279,12 +275,8 @@ export class UsersService {
       return UserMapper.toResponseDTO(updatedUser!, languages, this.publicUrl, null, null);
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      if (profileImage) await deleteFile(profileImage.path);
-      if (processedFile && processedFile?.path) {
-        await deleteFile(processedFile!.path);
-        if (processedFile?.thumbnailPath) {
-          await deleteFile(processedFile.thumbnailPath);
-        }
+      if (processedFile) {
+        await this.uploadService.deleteProcessedFile(processedFile);
       }
       throw err;
     } finally {

@@ -25,4 +25,7 @@ export class UploadVersionResponseDto {
 
   @ApiProperty()
   preview: string;
+
+  @ApiProperty()
+  version: string;
 }

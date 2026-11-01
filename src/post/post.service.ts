@@ -192,8 +192,7 @@ export class PostService {
         post.title.length > 200 ? post.title.slice(0, 200) : post.title,
         (author!.firstName + ' ' + author!.lastName)?.trim() ?? null,
         post.createdAt,
-        dto.coverImage!.originalUrl,
-        dto.coverImage!.thumbnailUrl ?? null,
+        dto.coverImage
       ),
     );
 

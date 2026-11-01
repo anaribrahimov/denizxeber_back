@@ -21,7 +21,7 @@ export class PublicPostDto {
   category: PublicPostCategoryDto;
 
   @ApiProperty()
-  coverImage?: PostCoverImageDto;
+  coverImage?: PostCoverImageDto | null;
 
   @ApiProperty()
   viewCount: number;
