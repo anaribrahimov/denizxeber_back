@@ -1,10 +1,16 @@
-import { ApiProperty } from "@nestjs/swagger";
+export class BannerCoverImageVersionItemDto {
+  version: string;
+  previewUrl: string;
+  width?: number | null;
+  height?: number | null;
+  size?: number | null;
+}
 
 export class BannerCoverImageDto {
-
-  @ApiProperty()
-  originalUrl: string;
-
-  @ApiProperty()
-  thumbnailUrl: string | null;
+  id: string;
+  previewUrl: string;
+  width?: number | null;
+  height?: number | null;
+  size?: number | null;
+  versions: BannerCoverImageVersionItemDto[];
 }
