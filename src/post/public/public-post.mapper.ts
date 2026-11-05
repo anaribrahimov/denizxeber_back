@@ -36,7 +36,7 @@ export class PublicPostMapper {
     const postDto = new PublicPostDto();
     postDto.id = post.id;
     postDto.category = {
-      id: post.category.id,
+      // id: post.category.id,
       name: post.category.name,
       slug: post.category.slug,
       languageCode: post.category.language.name.toLowerCase(),
@@ -62,8 +62,8 @@ export class PublicPostMapper {
     }
 
     postDto.author = {
-      id: post.author!.id,
-      email: post.author!.email,
+      // id: post.author!.id,
+      // email: post.author!.email,
       firstName: post.author!.firstName,
       lastName: post.author!.lastName,
     } as PostUserDto;

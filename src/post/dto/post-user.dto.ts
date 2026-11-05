@@ -1,8 +1,10 @@
 import { ApiProperty } from "@nestjs/swagger";
 
 export class PostUserDto {
-  @ApiProperty()
-  id: number;
+  @ApiProperty({
+    required: false
+  })
+  id?: number;
 
   @ApiProperty()
   email: string;
