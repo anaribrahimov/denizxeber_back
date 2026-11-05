@@ -47,15 +47,15 @@ export class Upload {
   @Column({
     name: 'file_name',
     type: 'varchar',
-    length: 100,
+    length: 255,
   })
-  @Unique('idx_uploads_file_name', ['file_name'])
+  // @Unique('idx_uploads_file_name', ['file_name'])
   fileName: string;
 
   @Column({
     name: 'file_key',
     type: 'varchar',
-    length: 255,
+    length: 300,
   })
   @Unique('idx_uploads_file_key', ['file_key'])
   fileKey: string;

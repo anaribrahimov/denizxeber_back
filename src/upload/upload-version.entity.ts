@@ -37,16 +37,16 @@ export class UploadVersion {
   @Column({
     name: 'file_name',
     type: 'varchar',
-    length: 100,
+    length: 300,
     nullable: false,
   })
-  @Unique('uk_upload_versions_file_name', ['file_name'])
+  // @Unique('uk_upload_versions_file_name', ['file_name'])
   fileName: string;
 
   @Column({
     name: 'file_key',
     type: 'varchar',
-    length: 255,
+    length: 355,
     nullable: false,
   })
   @Unique('uk_upload_versions_file_key', ['file_key'])
