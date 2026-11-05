@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { BadRequestException } from '@nestjs/common';
+import { UnsupportedMediaTypeException } from '@nestjs/common';
 // import { mkdir } from 'node:fs/promises';
 import { diskStorage } from 'multer';
 import { extname, join } from 'path';
@@ -138,7 +138,7 @@ export const profileImageFileFilter = (
     || !allowedExtensions.includes(ext)
   ) {
     return callback(
-      new BadRequestException('Only JPEG and PNG images are allowed'),
+      new UnsupportedMediaTypeException('Only JPEG and PNG images are allowed'),
       false,
     );
   }
@@ -155,14 +155,14 @@ export const commonUploadFilter = (
 
   if (!SUPPORTED_FILE_MIME_TYPES.includes(file.mimetype)) {
     return callback(
-      new BadRequestException(`Supported mime types are ${SUPPORTED_FILE_MIME_TYPES.join(', ')}`),
+      new UnsupportedMediaTypeException(`Supported mime types are ${SUPPORTED_FILE_MIME_TYPES.join(', ')}`),
       false,
     );
   }
 
   if (!SUPPORTED_FILE_EXTS.includes(ext)) {
     return callback(
-      new BadRequestException(`Supported file extensions are ${SUPPORTED_FILE_EXTS.join(', ')}`),
+      new UnsupportedMediaTypeException(`Supported file extensions are ${SUPPORTED_FILE_EXTS.join(', ')}`),
       false,
     );
   }

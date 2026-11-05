@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseIntPipe, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto.js";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { MAX_IMAGE_SIZE, multerStorageConfig, profileImageFileFilter } from "../common/multer/multer.config.js";
+import { MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, multerStorageConfig, profileImageFileFilter } from "../common/multer/multer.config.js";
 import { UsersService } from "./users.service.js";
 import { UserResponseDTO } from "./dto/user-response.dto.js";
 import { UpdateUserDTO } from "./dto/update-user.dto.js";
@@ -19,6 +19,7 @@ import { ApiDataResponse } from "../common/decorators/api-data-response.decorato
 import { AppApiResponse } from "../common/interfaces/app-api-response.interface.js";
 import { ApiPaginatedResponse } from "../common/decorators/api-paginated-response.decorator.js";
 import { UpdateProfileRequestDto } from "./dto/update-profile-request.dto.js";
+import { MaxFileSizeValidator } from "../common/validators/max-file-size-validator.pipe.js";
 
 @Controller('/users')
 @ApiTags('Users')
@@ -52,13 +53,18 @@ export class UsersController {
     type: ValidationErrorResponseDto,
   })
   @ApiResponse({
-    status: 422,
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
     description: 'Unprocessable entity',
     type: CommonErrorDto,
   })
   @ApiResponse({
     status: 413,
     description: 'Payload too large',
+    type: CommonErrorDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+    description: 'Unsupported media type',
     type: CommonErrorDto,
   })
   @UseInterceptors(
@@ -74,15 +80,14 @@ export class UsersController {
     @Body() createUserDto: CreateUserDto,
     @UploadedFile(
       new ParseFilePipeBuilder()
-        .addFileTypeValidator({ 
-          fileType: /(jpg|jpeg|png|webp)$/,
-          skipMagicNumbersValidation: true,
-          errorMessage: 'Only JPEG, PNG or WEBP images are allowed'
-        })
-        .addMaxSizeValidator({ maxSize: MAX_IMAGE_SIZE })
+        .addValidator(
+          new MaxFileSizeValidator({ 
+            maxImageSize: MAX_IMAGE_SIZE,
+            maxVideoSize: MAX_VIDEO_SIZE,
+          })
+        )
         .build({
           fileIsRequired: false,
-          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
         }),
     )
     profileImage: Express.Multer.File,
@@ -121,6 +126,11 @@ export class UsersController {
     description: 'Payload too large',
     type: CommonErrorDto,
   })
+  @ApiResponse({
+    status: HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+    description: 'Unsupported media type',
+    type: CommonErrorDto,
+  })
   @UseInterceptors(
     FileInterceptor('profileImage', {
       storage: multerStorageConfig('profile-images'),
@@ -134,15 +144,14 @@ export class UsersController {
     @CurrentUser() currentUser: AuthUser,
     @UploadedFile(
       new ParseFilePipeBuilder()
-        .addFileTypeValidator({ 
-          fileType: /(jpg|jpeg|png|webp)$/,
-          skipMagicNumbersValidation: true,
-          errorMessage: 'Only JPEG, PNG or WEBP images are allowed'
-        })
-        .addMaxSizeValidator({ maxSize: MAX_IMAGE_SIZE })
+        .addValidator(
+          new MaxFileSizeValidator({ 
+            maxImageSize: MAX_IMAGE_SIZE,
+            maxVideoSize: MAX_VIDEO_SIZE,
+          })
+        )
         .build({
           fileIsRequired: false,
-          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
         }),
     )
     profileImage?: Express.Multer.File,
@@ -178,6 +187,11 @@ export class UsersController {
     description: 'Payload too large',
     type: CommonErrorDto,
   })
+  @ApiResponse({
+    status: HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+    description: 'Unsupported media type',
+    type: CommonErrorDto,
+  })
   @UseInterceptors(
     FileInterceptor('profileImage', {
       storage: multerStorageConfig('profile-images'),
@@ -192,15 +206,14 @@ export class UsersController {
     @CurrentUser() currentUser: AuthUser,
     @UploadedFile(
       new ParseFilePipeBuilder()
-        .addFileTypeValidator({ 
-          fileType: /(jpg|jpeg|png|webp)$/,
-          skipMagicNumbersValidation: true,
-          errorMessage: 'Only JPEG, PNG or WEBP images are allowed'
-        })
-        .addMaxSizeValidator({ maxSize: MAX_IMAGE_SIZE })
+        .addValidator(
+          new MaxFileSizeValidator({ 
+            maxImageSize: MAX_IMAGE_SIZE,
+            maxVideoSize: MAX_VIDEO_SIZE,
+          })
+        )
         .build({
           fileIsRequired: false,
-          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
         }),
     )
     profileImage?: Express.Multer.File,

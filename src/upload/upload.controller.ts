@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseIntPipe, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { BadRequestException, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseIntPipe, PayloadTooLargeException, Post, Query, UnprocessableEntityException, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { UploadService } from "./upload.service.js";
 import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
@@ -17,6 +17,7 @@ import type { AuthUser } from "../auth/interfaces/auth-user.interface.js";
 import { ApiDataResponse } from "../common/decorators/api-data-response.decorator.js";
 import { AppApiResponse } from "../common/interfaces/app-api-response.interface.js";
 import { ApiPaginatedResponse } from "../common/decorators/api-paginated-response.decorator.js";
+import { MaxFileSizeValidator } from "../common/validators/max-file-size-validator.pipe.js";
 
 @Controller('/uploads')
 @UseGuards(RolesGuard)
@@ -62,6 +63,11 @@ export class UploadController {
     description: 'Payload too large',
     type: CommonErrorDto,
   })
+  @ApiResponse({
+    status: HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+    description: 'Payload too large',
+    type: CommonErrorDto,
+  })
   @UseInterceptors(
     FileInterceptor('file', {
       storage: multerStorageConfig('image'),
@@ -74,32 +80,26 @@ export class UploadController {
   async create(
     @UploadedFile(
       new ParseFilePipeBuilder()
-        .addFileTypeValidator({
-          fileType: /(jpg|jpeg|png|webp|gif|mp4|mpeg|mov|qt|webm)$/,
-          skipMagicNumbersValidation: true,
-          errorMessage: 'Suported file extensions are jpg, jpeg, png, webp, gif, mp4, mpeg, mov, qt, webm',
-        })
-        .addMaxSizeValidator({ 
-          maxSize: MAX_VIDEO_SIZE, 
-          errorMessage: `File size must not exceed ${MAX_VIDEO_SIZE} byte` 
-        })
+        // .addFileTypeValidator({
+        //   fileType: /(jpg|jpeg|png|webp|gif|mp4|mpeg|mov|qt|webm)$/,
+        //   skipMagicNumbersValidation: true,
+        //   errorMessage: 'Suported file extensions are jpg, jpeg, png, webp, gif, mp4, mpeg, mov, qt, webm',
+        // })
+        .addValidator(
+          new MaxFileSizeValidator({ 
+            maxImageSize: MAX_IMAGE_SIZE,
+            maxVideoSize: MAX_VIDEO_SIZE,
+          })
+        )
         .build({
           fileIsRequired: true,
-          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
+          errorHttpStatusCode: HttpStatus.BAD_REQUEST,
         }),
     )
     file: Express.Multer.File,
     @CurrentUser() userPrincipal: AuthUser,
   ): Promise<AppApiResponse<UploadResponseDto>> {
-    // console.log('file', file);
-    const isImage = file.mimetype.startsWith('image/');
-
-    if (isImage && file.size > MAX_IMAGE_SIZE) {
-      throw new BadRequestException(`Image size must not exceed ${MAX_IMAGE_SIZE} byte`);
-    }
-
     const upload: UploadResponseDto = await this.uploadService.create(file, userPrincipal);
-
     return { data: upload };
   }
 
