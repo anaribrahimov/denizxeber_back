@@ -98,6 +98,7 @@ export class PostService {
           id: true,
           firstName: true,
           lastName: true,
+          email: true,
           // profileImageId: true,
           // profileImage: {
           //   fileKey: true,
@@ -173,8 +174,10 @@ export class PostService {
     post.category = category!;
     post.coverImage = coverImage;
     post.author = {
-      id: userPrincipal.userId,
-      email: userPrincipal.email,
+      id: author!.id,
+      email: author!.email,
+      firstName: author!.firstName,
+      lastName: author!.lastName,
     } as User;
 
     const previewUrl = generatePublicPostPreviewUrl(post.slug, this.postPreviewUrl);
