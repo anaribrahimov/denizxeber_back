@@ -6,6 +6,7 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -14,6 +15,7 @@ import { Category } from '../category/category.entity.js';
 import { Status } from '../status/status.entity.js';
 import { Upload } from '../upload/upload.entity.js';
 import { User } from '../users/user.entity.js';
+import { PostSlugHistory } from './post-slug-history.entity.js';
 
 @Entity({ name: 'posts' })
 @Index(
@@ -172,4 +174,7 @@ export class Post {
   })
   @JoinColumn({ name: 'last_updated_by_id' })
   lastUpdatedBy: User | null;
+
+  @OneToMany(() => PostSlugHistory, (history) => history.post)
+  slugHistories: PostSlugHistory[];
 }

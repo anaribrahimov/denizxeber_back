@@ -21,7 +21,7 @@ export class PublicPostController {
 
   constructor(
     private readonly postService: PostService,
-  ) {}
+  ) { }
 
   @Get()
   @Public()
@@ -88,18 +88,39 @@ export class PublicPostController {
     '',
   )
   @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Post not found',
-    summary: 'Post not found',
-    type: CommonErrorDto
+    status: HttpStatus.MOVED_PERMANENTLY,
+    description: 'Post has been moved permanently',
+    schema: {
+      type: 'object',
+      properties: {
+        url: {
+          type: 'string',
+          example: '/public/posts/new-slug',
+          description: 'Relative URL of the new post location',
+        },
+      },
+      required: ['redirect'],
+    },
+  })
+  @ApiResponse({
+    status: HttpStatus.MOVED_PERMANENTLY,
+    description: 'Moved permanently',
   })
   @HttpCode(HttpStatus.OK)
   async findPost(
     @Param('postSlug') postSlug: string
-  ): Promise<AppApiResponse<PublicPostDto>> {
-    return { 
-      data: await this.postService.findBySlugForPublic(postSlug),
+  ): Promise<AppApiResponse<PublicPostDto> | {
+    url: string,
+  }> {
+    const result = await this.postService.findBySlugForPublic(postSlug)
+
+    if ('redirect' in result) {
+      return {
+        url: result.redirect,
+      };
     }
+
+    return { data: result };
   }
 
 }

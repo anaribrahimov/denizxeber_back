@@ -3,7 +3,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, In, Repository } from 'typeorm';
+import { Brackets, DataSource, In, Repository } from 'typeorm';
 
 import { Post } from './post.entity.js';
 import { CreatePostDto } from './dto/create-post.dto.js';
@@ -34,6 +34,8 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PostCreatedEvent } from './event/post-created.event.js';
 import { generatePublicPostPreviewUrl } from './util/util.js';
 import dayjs from 'dayjs';
+import slug from 'slug';
+import { PostSlugHistory } from './post-slug-history.entity.js';
 
 export const COVER_IMAGE_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png'];
 
@@ -60,6 +62,11 @@ export class PostService {
     private readonly configService: ConfigService,
 
     private readonly eventEmitter: EventEmitter2,
+
+    private readonly datasource: DataSource,
+
+    @InjectRepository(PostSlugHistory)
+    private readonly postSlugHistoryRepository: Repository<PostSlugHistory>,
   ) {
     this.filesPublicUrl =
       this.configService.getOrThrow<string>('app.filesPublicUrl');
@@ -261,173 +268,188 @@ export class PostService {
     dto: UpdatePostDto,
     userPrincipal: AuthUser,
   ): Promise<PostDto> {
-    // find post
-    const post = await this.postRepository
-      .createQueryBuilder('p')
-      .withDeleted()
-      .innerJoin(
-        'p.category',
-        'c',
-        'c.langId IN (:...langIds)',
-        { langIds: userPrincipal.langIds }
-      )
-      .leftJoin('p.author', 'a')
-      .leftJoin('p.status', 's')
-      .leftJoin('p.lastUpdatedBy', 'lu')
-      .addSelect([
-        'c.id',
-        'c.name',
-        'c.slug',
-        'c.langId',
-        'a.id',
-        'a.email',
-        'a.firstName',
-        'a.lastName',
-        's.id',
-        's.name',
-        'lu.id',
-        'lu.email',
-        'lu.firstName',
-        'lu.lastName',
-      ])
-      .andWhere('p.id = :id', { id })
-      .andWhere('p.deletedAt IS NULL')
-      .getOne();
+    return this.datasource.transaction(async (manager) => {
+      const postRepository = manager.getRepository(Post);
+      const categoryRepository = manager.getRepository(Category);
+      const uploadRepository = manager.getRepository(Upload);
+      const userRepository = manager.getRepository(User);
+      const slugHistoryRepository = manager.getRepository(PostSlugHistory);
 
-    if (!post) {
-      throw new NotFoundException(`Post not found, id: ${id}`);
-    }
-
-    if (
-      dto.categoryId === undefined
-      && dto.priorityId === undefined
-      && dto.content === undefined
-      && dto.coverImageId === undefined
-      && dto.statusId === undefined
-      && dto.title === undefined
-    ) {
-      throw new ValidationException({}, 'Nothing send to update');
-    }
-
-    // find post cover image
-    post.coverImage = post.coverImageId
-      ? await this.uploadRepository
-        .findOne({
-          where: { id: post.coverImageId },
-          relations: {
-            versions: true
-          }
-        })
-      : null;
-
-    const errors: Record<string, string[]> = {};
-
-    if (dto.categoryId && dto.categoryId !== post.categoryId) {
-      const category = await this.categoryRepository
-        .findOne({
-          where: {
-            id: dto.categoryId,
-            langId: post.category.langId,
-          }
-        });
-
-      if (!category) {
-        errors['categoryId'] = ['category not found'];
-      } else {
-        post.categoryId = dto.categoryId;
-        post.category = category!;
+      // find post
+      const post = await postRepository
+        .createQueryBuilder('p')
+        .withDeleted()
+        .innerJoin(
+          'p.category',
+          'c',
+          'c.langId IN (:...langIds)',
+          { langIds: userPrincipal.langIds }
+        )
+        .leftJoin('p.author', 'a')
+        .leftJoin('p.status', 's')
+        .leftJoin('p.lastUpdatedBy', 'lu')
+        .addSelect([
+          'c.id',
+          'c.name',
+          'c.slug',
+          'c.langId',
+          'a.id',
+          'a.email',
+          'a.firstName',
+          'a.lastName',
+          's.id',
+          's.name',
+          'lu.id',
+          'lu.email',
+          'lu.firstName',
+          'lu.lastName',
+        ])
+        .andWhere('p.id = :id', { id })
+        .andWhere('p.deletedAt IS NULL')
+        .setLock('pessimistic_write')
+        .getOne();
+  
+      if (!post) {
+        throw new NotFoundException(`Post not found, id: ${id}`);
       }
-    }
 
-    if (dto.priorityId !== undefined) {
-      if (!dto.priorityId) {
-        post.priorityId = null;
-      } else {
-        if (dto.priorityId !== post.priorityId) {
-          if (
-            post.priorityId !== prioritiesCached.updating.id
-            && dto.priorityId === prioritiesCached.updated.id
-          ) {
-            errors['prirityId'] = ['Can not directly change to updated priority'];
-          } else {
-            post.priorityId = dto.priorityId;
-            post.sortAt = new Date(new Date().toISOString());
-          }
-        }
+      const hasChanges = Object.values(dto).some(
+        (value) => value !== undefined,
+      );
+  
+      if (!hasChanges) {
+        throw new ValidationException({}, 'Nothing send to update');
       }
-    }
-
-
-    if (dto.coverImageId !== undefined) {
-      if (dto.coverImageId === null) {
-        post.coverImageId = null;
-        post.coverImage = null;
-      } else {
-        // find cover image
-        const coverImage = await this.uploadRepository
+  
+      // find post cover image
+      post.coverImage = post.coverImageId
+        ? await this.uploadRepository
           .findOne({
-            where: {
-              id: dto.coverImageId,
-              type: UploadType.PUBLIC,
-            },
+            where: { id: post.coverImageId },
             relations: {
               versions: true
             }
+          })
+        : null;
+  
+      const errors: Record<string, string[]> = {};
+  
+      if (dto.categoryId && dto.categoryId !== post.categoryId) {
+        const category = await categoryRepository
+          .findOne({
+            where: {
+              id: dto.categoryId,
+              langId: post.category.langId,
+            }
           });
-
-        if (!coverImage) {
-          errors['coverImageId'] = ['Cover image not found'];
+  
+        if (!category) {
+          errors['categoryId'] = ['category not found'];
         } else {
-          if (!COVER_IMAGE_MIME_TYPES.includes(coverImage.fileMimeType)) {
-            errors.coverImageId = [
-              'invalid file type. '
-              + `Allowed types: ${COVER_IMAGE_MIME_TYPES.join(', ')}`
-            ];
-          } else {
-            post.coverImageId = dto.coverImageId;
-            post.coverImage = coverImage;
+          post.categoryId = dto.categoryId;
+          post.category = category!;
+        }
+      }
+  
+      if (dto.priorityId !== undefined) {
+        if (!dto.priorityId) {
+          post.priorityId = null;
+        } else {
+          if (dto.priorityId !== post.priorityId) {
+            if (
+              post.priorityId !== prioritiesCached.updating.id
+              && dto.priorityId === prioritiesCached.updated.id
+            ) {
+              errors['prirityId'] = ['Can not directly change to updated priority'];
+            } else {
+              post.priorityId = dto.priorityId;
+              post.sortAt = new Date(new Date().toISOString());
+            }
           }
         }
       }
-    }
-
-    if (Object.keys(errors).length) {
-      throw new ValidationException(errors);
-    }
-
-    // last updater
-    const lastUpdatedBy = await this.userRepository
-      .findOne({
-        where: { id: userPrincipal.userId },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
+  
+  
+      if (dto.coverImageId !== undefined) {
+        if (dto.coverImageId === null) {
+          post.coverImageId = null;
+          post.coverImage = null;
+        } else {
+          // find cover image
+          const coverImage = await uploadRepository
+            .findOne({
+              where: {
+                id: dto.coverImageId,
+                type: UploadType.PUBLIC,
+              },
+              relations: {
+                versions: true
+              }
+            });
+  
+          if (!coverImage) {
+            errors['coverImageId'] = ['Cover image not found'];
+          } else {
+            if (!COVER_IMAGE_MIME_TYPES.includes(coverImage.fileMimeType)) {
+              errors.coverImageId = [
+                'invalid file type. '
+                + `Allowed types: ${COVER_IMAGE_MIME_TYPES.join(', ')}`
+              ];
+            } else {
+              post.coverImageId = dto.coverImageId;
+              post.coverImage = coverImage;
+            }
+          }
         }
-      });
+      }
+  
+      if (Object.keys(errors).length) {
+        throw new ValidationException(errors);
+      }
+  
+      // last updater
+      const lastUpdatedBy = await userRepository
+        .findOne({
+          where: { id: userPrincipal.userId },
+          select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+          }
+        });
+  
+      if (dto.statusId) {
+        const status = statuses.find((status) => status.id === dto.statusId);
+        post.status = status!;
+      }
+  
+      if (dto.title && dto.title.toLowerCase() !== post.title.toLowerCase()) {
+        post.title = dto.title;
+        const oldSlug = post.slug;
+        post.slug = slug(dto.title.slice(0, 200)) + '-' + Date.now();
+        
+        const slugHistory = await slugHistoryRepository.create({
+          postId: id,
+          slug: oldSlug,
+        });
 
-    if (dto.statusId) {
-      const status = statuses.find((status) => status.id === dto.statusId);
-      post.status = status!;
-    }
-
-    if (dto.title) {
-      post.title = dto.title;
-    }
-
-    if (dto.content) {
-      post.content = dto.content;
-    }
-
-    // set post last updated by
-    post.lastUpdatedById = userPrincipal.userId;
-    post.lastUpdatedBy = lastUpdatedBy;
-
-    // save post
-    await this.postRepository.save(post);
-
-    return PostMapper.toDto(post, this.filesPublicUrl);
+        await slugHistoryRepository.save(slugHistory);
+      }
+  
+      if (dto.content) {
+        post.content = dto.content;
+      }
+  
+      // set post last updated by
+      post.lastUpdatedById = userPrincipal.userId;
+      post.lastUpdatedBy = lastUpdatedBy;
+  
+      // save post
+      await postRepository.save(post);
+  
+      return PostMapper.toDto(post, this.filesPublicUrl);
+    });
   }
 
   async remove(
@@ -648,7 +670,9 @@ export class PostService {
 
   public async findBySlugForPublic(
     postSlug: string,
-  ): Promise<PublicPostDto> {
+  ): Promise<PublicPostDto | {
+    redirect: string
+  }> {
     const post = await this.postRepository
       .createQueryBuilder('p')
       .withDeleted()
@@ -682,7 +706,29 @@ export class PostService {
       .getOne();
 
     if (!post) {
-      throw new NotFoundException(`Post with slug "${postSlug}" not found`);
+      // lookup in slug history
+      const history = await this.postSlugHistoryRepository
+        .createQueryBuilder('s')
+        .innerJoin('s.post', 'p')
+        .select([
+          's.slug',
+          's.postId',
+          'p.id',
+          'p.slug',
+        ])
+        .where('s.slug = :slug', { slug: postSlug })
+        .andWhere('p.statusId = :statusId', { statusId: StatusEnum.Published })
+        .getOne();
+
+      if (history?.post) {
+        return {
+          redirect: `/public/posts/${encodeURIComponent(history.post.slug)}`,
+        };
+      }
+
+      throw new NotFoundException(
+        `Post with slug "${postSlug}" not found`,
+      );
     }
 
     await this.postRepository
@@ -695,6 +741,8 @@ export class PostService {
       })
       .where('id = :id', { id: post.id })
       .execute();
+
+    post.viewCount++;
 
     // get cover images
     if (post.coverImageId) {
@@ -896,8 +944,8 @@ export class PostService {
         'p.category',
         'c',
         'c.langId = :langId', {
-        langId,
-      }
+          langId,
+        }
       )
       .select('p.id', 'id')
       .addSelect('p.categoryId', 'categoryId')
