@@ -34,6 +34,7 @@ const PROFILE_IMAGE_MIME_TYPES: Record<string, string[]> = {
   'image/jpeg': ['.jpg'], 
   'image/jpg': ['.jpg'], 
   'image/png': ['.png'],
+  'image/webp': ['.webp'],
 };
 
 export const IMAGE_MIME_TYPES: Record<string, string[]> = {
@@ -41,6 +42,7 @@ export const IMAGE_MIME_TYPES: Record<string, string[]> = {
   'image/jpg': ['.jpg'], 
   'image/png': ['.png'],
   'image/gif': ['.gif'],
+  'image/webp': ['.webp'],
 };
 
 export const VIDEO_MIME_TYPES: Record<string, string[]> = {
@@ -59,7 +61,7 @@ export const SUPPORTED_FILE_MIME_TYPES: string[] = [
   'image/jpeg',
   'image/jpg',
   'image/png',
-  'image/webm',
+  'image/webp',
   'image/gif',
   'video/mp4',
   'video/mpeg',
@@ -70,7 +72,7 @@ export const SUPPORTED_FILE_MIME_TYPES: string[] = [
 export const SUPPORTED_FILE_EXTS: string[] = [
   '.jpg',
   '.png',
-  '.webm',
+  '.webp',
   '.gif',
   '.mp4',
   '.mpeg',
