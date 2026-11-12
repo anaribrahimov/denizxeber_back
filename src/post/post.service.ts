@@ -722,7 +722,7 @@ export class PostService {
 
       if (history?.post) {
         return {
-          redirect: `/public/posts/${encodeURIComponent(history.post.slug)}`,
+          redirect: history.post.slug,
         };
       }
 
