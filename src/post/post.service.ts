@@ -1027,8 +1027,8 @@ export class PostService {
 
     qb.innerJoin('c.language', 'l')
 
-    if (queryDto.categoryId) {
-      qb.andWhere('p.categoryId = :categoryId', { categoryId: queryDto.categoryId })
+    if (queryDto.categorySlug) {
+      qb.andWhere('c.slug LIKE :categorySlug', { categorySlug: queryDto.categorySlug });
     }
 
     qb.andWhere('p.statusId = :statusId', { statusId: StatusEnum.Published });
