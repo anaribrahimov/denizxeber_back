@@ -34,7 +34,7 @@ export class PublicPostMapper {
     }
 
     const postDto = new PublicPostDto();
-    postDto.id = post.id;
+    // postDto.id = post.id;
     postDto.category = {
       // id: post.category.id,
       name: post.category.name,

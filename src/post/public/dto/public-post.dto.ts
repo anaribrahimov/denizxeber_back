@@ -5,8 +5,8 @@ import { PublicPostCategoryDto } from "./post-category.dto.js";
 
 export class PublicPostDto {
 
-  @ApiProperty()
-  id: string;
+  // @ApiProperty()
+  // id: string;
 
   @ApiProperty()
   title: string;
