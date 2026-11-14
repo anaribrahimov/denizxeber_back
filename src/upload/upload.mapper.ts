@@ -70,6 +70,7 @@ export class UploadMapper {
     dto.fileWidth = upload.fileWidth;
     dto.fileHeight = upload.fileHeight;
     dto.fileSizeByte = upload.fileSizeByte;
+    dto.mimeType = upload.fileMimeType;
     dto.durationSec = upload.durationSec;
     dto.createdAt = upload.createdAt;
     dto.preview = createPreviewUrl(publicUrl, upload.fileKey);

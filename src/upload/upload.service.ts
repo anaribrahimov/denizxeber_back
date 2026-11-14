@@ -292,7 +292,7 @@ export class UploadService {
   async findPaginated(
     query: PaginateUploadDto
   ): Promise<PaginatedResult<UploadResponseDto>> {
-    const { limit, page, fileName } = query;
+    const { limit, page, fileName, fileFormat } = query;
 
     const qb = this.uploadRepository
       .createQueryBuilder('uploads')
@@ -322,6 +322,14 @@ export class UploadService {
       qb.andWhere('uploads.fileOriginalName LIKE :fileName', {
         fileName: `%${fileName.trim()}%`,
       })
+    }
+
+    if (fileFormat && ['video','image'].includes(fileFormat.toLowerCase())) {
+      if (fileFormat.toLowerCase() === 'video') {
+        qb.andWhere(`uploads.fileMimeType LIKE 'video/%'`)
+      } else if (fileFormat.toLowerCase() === 'image') {
+        qb.andWhere(`uploads.fileMimeType LIKE 'image/%'`)
+      }
     }
 
     qb
