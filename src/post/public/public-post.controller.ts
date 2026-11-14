@@ -1,4 +1,4 @@
-import { Controller, Get, HttpCode, HttpStatus, Param, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, HttpCode, HttpStatus, Param, Query, Res, UseGuards } from "@nestjs/common";
 import { ApiResponse, ApiTags } from "@nestjs/swagger";
 import { CurrentLanguage } from "../../common/decorators/current-language.decorator.js";
 import { Language } from "../../language/language.entity.js";
@@ -14,6 +14,7 @@ import { LangCodeQueryDto } from "../../common/dto/lang-code-query.dto.js";
 import { PublicPostQueryDto } from "./dto/public-post-query.dto.js";
 import { ApiCursorPaginatedResponse } from "../../common/decorators/api-cursor-paginated-response.decorator.js";
 import { CategoryAndSliderPostsResponseDto } from "./dto/category-slider-posts-response.dto.js";
+import type { Response } from "express";
 
 @Controller('/public/posts')
 @ApiTags('Posts')
@@ -21,7 +22,7 @@ export class PublicPostController {
 
   constructor(
     private readonly postService: PostService,
-  ) {}
+  ) { }
 
   @Get()
   @Public()
@@ -54,7 +55,7 @@ export class PublicPostController {
     }
   }
 
-  @Get('/top-3-posts-per-category-slider-posts-other-posts')
+  @Get('/all-news')
   @Public()
   @UseGuards(LanguageQueryGuard)
   @ApiDataArrayResponse(
@@ -70,7 +71,7 @@ export class PublicPostController {
     type: CommonErrorDto
   })
   @HttpCode(HttpStatus.OK)
-  public async getTop3PostsPerCategoryAndSliderPostsAndOtherPosts(
+  public async allNews(
     @Query() dto: LangCodeQueryDto,
     @CurrentLanguage() currentLang: Language,
   ): Promise<AppApiResponse<CategoryAndSliderPostsResponseDto>> {
@@ -88,18 +89,35 @@ export class PublicPostController {
     '',
   )
   @ApiResponse({
-    status: HttpStatus.NOT_FOUND,
-    description: 'Post not found',
-    summary: 'Post not found',
-    type: CommonErrorDto
+    status: HttpStatus.MOVED_PERMANENTLY,
+    description: 'Post has been moved permanently',
+    // schema: {
+    //   type: 'object',
+    //   properties: {
+    //     url: {
+    //       type: 'string',
+    //       example: '/public/posts/new-slug',
+    //       description: 'Relative URL of the new post location',
+    //     },
+    //   },
+    //   required: ['redirect'],
+    // },
   })
-  @HttpCode(HttpStatus.OK)
   async findPost(
-    @Param('postSlug') postSlug: string
-  ): Promise<AppApiResponse<PublicPostDto>> {
-    return { 
-      data: await this.postService.findBySlugForPublic(postSlug),
+    @Param('postSlug') postSlug: string,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AppApiResponse<PublicPostDto> | void> {
+    const result = await this.postService.findBySlugForPublic(postSlug)
+
+    if ('redirect' in result) {
+      response
+        .status(HttpStatus.MOVED_PERMANENTLY)
+        .header('Location', encodeURIComponent(result.redirect));
+
+      return;
     }
+
+    return { data: result };
   }
 
 }

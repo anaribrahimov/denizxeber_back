@@ -56,6 +56,13 @@ export class Category {
   })
   deletedAt: Date | null;
 
+  @Column({
+    name:'row_number',
+    type: 'int',
+    nullable: true,
+  })
+  rowNumber: number | null;
+
   // not a database column
   postsCount?: number;
 

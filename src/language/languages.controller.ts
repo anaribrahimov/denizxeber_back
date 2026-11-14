@@ -11,7 +11,7 @@ export class LanguagesController {
   @Get()
   async findAll() {
     return {
-      data: await this.languagesService.findAll(),
+      data: this.languagesService.findAll(),
     }
   }
 }

@@ -4,9 +4,10 @@ import { Post } from "./post.entity.js";
 import { createPreviewUrl } from "../common/utils/media.util.js";
 import { PostDto } from "./dto/post.dto.js";
 import { PostCategoryDto } from "./dto/post-category.dto.js";
-import { PostCoverImageDto } from "./dto/post-cover-image.dto.js";
+import { PostCoverImageDto, PostCoverImageVersionItemDto } from "./dto/post-cover-image.dto.js";
 import { PostUserDto } from "./dto/post-user.dto.js";
 import { prioritiesCached } from "../priority/priority.cache.js";
+import { UploadVersion } from "../upload/upload-version.entity.js";
 
 export class PostMapper {
 
@@ -14,6 +15,29 @@ export class PostMapper {
     post: Post,
     publicUrl: string,
   ): PostDto {
+    let coverImageDto: PostCoverImageDto | null = null; 
+    if (post.coverImage) {
+      coverImageDto = new PostCoverImageDto();
+      coverImageDto.id = post.coverImage.id.toString();
+      coverImageDto.previewUrl = 
+        createPreviewUrl(publicUrl, post.coverImage.fileKey);
+      coverImageDto.width = post.coverImage.fileWidth;
+      coverImageDto.height = post.coverImage.fileHeight;
+      coverImageDto.size = post.coverImage.fileSizeByte;
+      coverImageDto.versions = [];
+      if (post.coverImage.versions?.length) {
+        post.coverImage.versions.forEach((item: UploadVersion) => {
+          coverImageDto?.versions.push({
+            version: item.version,
+            previewUrl: createPreviewUrl(publicUrl, item.fileKey),
+            width: item.fileWidth,
+            height: item.fileHeight,
+            size: item.fileSizeByte,
+          } as PostCoverImageVersionItemDto);
+        })
+      }
+    }
+
     const postDto = new PostDto();
     postDto.id = post.id;
     postDto.category = {
@@ -31,6 +55,7 @@ export class PostMapper {
     postDto.viewCount = post.viewCount;
     postDto.sortAt = post.sortAt;
     postDto.isUpdating = post.isUpdating;
+    postDto.coverImage = coverImageDto;
     
     if (post.priorityId === prioritiesCached.updating.id) {
       postDto.priority = prioritiesCached.updating.name as 'updating';
@@ -41,18 +66,6 @@ export class PostMapper {
     }
 
     postDto.status = post.status!.name;
-
-    if (post.coverImage) {
-      const coverImageDto = new PostCoverImageDto();
-      coverImageDto.originalUrl = createPreviewUrl(publicUrl, post.coverImage.fileKey);
-      coverImageDto.thumbnailUrl = 
-        Array.isArray(post.coverImage.versions) && post.coverImage.versions.length
-          ? createPreviewUrl(publicUrl, post.coverImage.versions[0].fileKey)
-          : null;
-      postDto.coverImage = coverImageDto;
-    } else {
-      postDto.coverImage = null;
-    }
 
     postDto.author = post.author
       ? {

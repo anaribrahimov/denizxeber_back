@@ -17,9 +17,7 @@ export class PublicPostQueryDto extends LangCodeQueryDto {
   limit: number = 1;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  categoryId?: number | null;
+  categorySlug?: string | null;
 
   @IsOptional()
   @Type(() => Number)

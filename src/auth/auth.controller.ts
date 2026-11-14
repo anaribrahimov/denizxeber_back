@@ -89,16 +89,16 @@ export class AuthController {
     return { message: 'Logged out from all devices' };
   }
 
-  @Get('me')
-  getProfile(@CurrentUser() user: any) {
-    return { data: user };
-  }
+  // @Get('me')
+  // getProfile(@CurrentUser() user: any) {
+  //   return { data: user };
+  // }
 
   // Example of role-restricted route
-  @UseGuards(RolesGuard)
-  @Roles('Admin')
-  @Get('admin-only')
-  adminOnly() {
-    return { message: 'Only admins see this' };
-  }
+  // @UseGuards(RolesGuard)
+  // @Roles('Admin')
+  // @Get('admin-only')
+  // adminOnly() {
+  //   return { message: 'Only admins see this' };
+  // }
 }

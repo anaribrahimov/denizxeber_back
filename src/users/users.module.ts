@@ -6,6 +6,7 @@ import { UsersService } from "./users.service.js";
 import { Role } from "../roles/role.entity.js";
 import { Language } from "../language/language.entity.js";
 import { UploadModule } from "../upload/upload.module.js";
+import { StorageService } from "../common/services/storage.service.js";
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { UploadModule } from "../upload/upload.module.js";
     UploadModule,
   ],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService, StorageService],
   exports: [UsersService],
 })
 export class UsersModule {}

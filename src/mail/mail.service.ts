@@ -15,8 +15,7 @@ export interface PostEmailJobData {
   excerpt: string;
   authorFullName: string;
   createdAt: Date;
-  coverImageOriginal: string;
-  coverImageThumbnail: string | null;
+  coverImageUrl: string | null;
   languageName: string;
 }
 
@@ -52,8 +51,7 @@ export class MailService {
             excerpt: event.excerpt,
             authorFullName: event.authorFullName,
             createdAt: event.createdAt,
-            coverImageOriginal: event.coverImageOriginal!,
-            coverImageThumbnail: event.coverImageThumbnail ?? null,
+            coverImageUrl: event.coverImage?.previewUrl ?? null,
             languageName: event.languageName,
           } satisfies PostEmailJobData,
           opts: {

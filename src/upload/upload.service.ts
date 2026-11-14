@@ -4,7 +4,7 @@ import { MediaService, ProcessedFileResult } from "../common/services/media.serv
 import { StorageService } from "../common/services/storage.service.js";
 import { UploadMapper } from "./upload.mapper.js";
 import { InjectRepository } from "@nestjs/typeorm";
-import { DataSource, In, IsNull, LessThan, MoreThan, Not, QueryRunner, Repository } from "typeorm";
+import { DataSource, In, LessThan, MoreThan, QueryRunner, Repository } from "typeorm";
 import { UploadVersion } from "./upload-version.entity.js";
 import { parseRangeHeader } from "../common/utils/range.util.js";
 import { RangeNotSatisfiableException } from "../common/exceptions/range-not-satisfiable.exception.js";
@@ -66,22 +66,24 @@ export class UploadService {
     // save upload
     await queryRunner.manager.save(upload);
 
-    if (processedFile.thumbnailKey) {
-      const version: UploadVersion = UploadMapper.toUploadVersionEntity(
-        upload,
-        processedFile.thumbnailFilename!,
-        processedFile.thumbnailMimeType!,
-        processedFile.thumbnailKey,
-        processedFile.thumbnailWidth,
-        processedFile.thumbnailHeight,
-        processedFile.thumbnailSizeInBytes
-      )
+    if (processedFile.versions.length) {
+      const versions: UploadVersion[] = processedFile.versions
+        .map(
+          (version) => UploadMapper.toUploadVersionEntity(
+            upload,
+            version.fileName!,
+            version.mimeType!,
+            version.fileKey,
+            version.width,
+            version.height,
+            version.size,
+            version.versionName,
+          )
+        )
 
-      // save upload versions
-      await queryRunner.manager.save(version);
+      await queryRunner.manager.save(versions);
 
-      // set upload entity versions
-      upload.versions = [version];
+      upload.versions = versions;
     }
 
     return upload;
@@ -89,6 +91,19 @@ export class UploadService {
 
   public async processFile(file: Express.Multer.File): Promise<ProcessedFileResult> {
     return this.mediaService.processUpload(file);
+  }
+
+  public async deleteProcessedFile(processedFile: ProcessedFileResult): Promise<void> {
+    if (processedFile.path) {
+      await this.storageService.delete(processedFile.path);
+    }
+    if (processedFile.versions.length) {
+      for (const version of processedFile.versions) {
+        if (version.path) {
+          await this.storageService.delete(version.path); 
+        }
+      }
+    }
   }
   
   public async create(
@@ -137,12 +152,10 @@ export class UploadService {
 
     } catch (err) {
 
-      if (processedFile.path) {
-        await this.storageService.delete(processedFile.path);
-      }
-      
-      if (processedFile.thumbnailPath) {
-        await this.storageService.delete(processedFile.thumbnailPath);
+      await queryRunner.rollbackTransaction();
+
+      if (processedFile) {
+        await this.deleteProcessedFile(processedFile);
       }
       
       throw err;
@@ -279,7 +292,7 @@ export class UploadService {
   async findPaginated(
     query: PaginateUploadDto
   ): Promise<PaginatedResult<UploadResponseDto>> {
-    const { limit, page, fileName } = query;
+    const { limit, page, fileName, fileFormat } = query;
 
     const qb = this.uploadRepository
       .createQueryBuilder('uploads')
@@ -309,6 +322,14 @@ export class UploadService {
       qb.andWhere('uploads.fileOriginalName LIKE :fileName', {
         fileName: `%${fileName.trim()}%`,
       })
+    }
+
+    if (fileFormat && ['video','image'].includes(fileFormat.toLowerCase())) {
+      if (fileFormat.toLowerCase() === 'video') {
+        qb.andWhere(`uploads.fileMimeType LIKE 'video/%'`)
+      } else if (fileFormat.toLowerCase() === 'image') {
+        qb.andWhere(`uploads.fileMimeType LIKE 'image/%'`)
+      }
     }
 
     qb

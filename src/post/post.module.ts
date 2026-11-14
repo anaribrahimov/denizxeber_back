@@ -10,11 +10,12 @@ import { User } from "../users/user.entity.js";
 import { PublicPostController } from "./public/public-post.controller.js";
 import { PostCreatedListener } from "./listener/post-created.listener.js";
 import { MailModule } from "../mail/mail.module.js";
+import { PostSlugHistory } from "./post-slug-history.entity.js";
 
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Post, Category, Upload, Status, User]),
+    TypeOrmModule.forFeature([Post, Category, Upload, Status, User, PostSlugHistory]),
     MailModule,
   ],
   controllers: [PostController, PublicPostController],

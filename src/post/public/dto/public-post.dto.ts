@@ -5,8 +5,8 @@ import { PublicPostCategoryDto } from "./post-category.dto.js";
 
 export class PublicPostDto {
 
-  @ApiProperty()
-  id: string;
+  // @ApiProperty()
+  // id: string;
 
   @ApiProperty()
   title: string;
@@ -21,7 +21,7 @@ export class PublicPostDto {
   category: PublicPostCategoryDto;
 
   @ApiProperty()
-  coverImage?: PostCoverImageDto;
+  coverImage?: PostCoverImageDto | null;
 
   @ApiProperty()
   viewCount: number;

@@ -1,3 +1,5 @@
+import { PostCoverImageDto } from "../dto/post-cover-image.dto.js";
+
 export class PostCreatedEvent {
   static readonly eventName = 'post.created';
 
@@ -9,7 +11,6 @@ export class PostCreatedEvent {
     public readonly excerpt: string,
     public readonly authorFullName: string,
     public readonly createdAt: Date,
-    public readonly coverImageOriginal: string,
-    public readonly coverImageThumbnail: string | null,
+    public readonly coverImage: PostCoverImageDto | null,
   ) {}
 }

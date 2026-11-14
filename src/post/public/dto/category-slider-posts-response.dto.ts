@@ -2,9 +2,8 @@ import { ApiProperty } from "@nestjs/swagger";
 import { PublicPostDto } from "./public-post.dto.js";
 
 export class CategoryPostItem {
-
-  categoryId: number;
-  
+  categoryName: string;
+  categorySlug: string;
   posts: PublicPostDto[];
 }
 

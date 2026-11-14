@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseIntPipe, Patch, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto.js";
 import { FileInterceptor } from "@nestjs/platform-express";
-import { MAX_IMAGE_SIZE, multerStorageConfig, profileImageFileFilter } from "../common/multer/multer.config.js";
+import { MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, multerStorageConfig, profileImageFileFilter } from "../common/multer/multer.config.js";
 import { UsersService } from "./users.service.js";
 import { UserResponseDTO } from "./dto/user-response.dto.js";
 import { UpdateUserDTO } from "./dto/update-user.dto.js";
@@ -18,10 +18,10 @@ import { CommonErrorDto } from "../common/dto/common-error.dto.js";
 import { ApiDataResponse } from "../common/decorators/api-data-response.decorator.js";
 import { AppApiResponse } from "../common/interfaces/app-api-response.interface.js";
 import { ApiPaginatedResponse } from "../common/decorators/api-paginated-response.decorator.js";
+import { UpdateProfileRequestDto } from "./dto/update-profile-request.dto.js";
+import { MaxFileSizeValidator } from "../common/validators/max-file-size-validator.pipe.js";
 
 @Controller('/users')
-@UseGuards(RolesGuard)
-@Roles('Admin')
 @ApiTags('Users')
 @ApiResponse({ 
   status: HttpStatus.UNAUTHORIZED, 
@@ -37,6 +37,8 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
   @ApiOperation({ summary: 'Create a new user' })
   @ApiConsumes('multipart/form-data')
   @ApiDataResponse(
@@ -51,13 +53,18 @@ export class UsersController {
     type: ValidationErrorResponseDto,
   })
   @ApiResponse({
-    status: 422,
+    status: HttpStatus.UNPROCESSABLE_ENTITY,
     description: 'Unprocessable entity',
     type: CommonErrorDto,
   })
   @ApiResponse({
     status: 413,
     description: 'Payload too large',
+    type: CommonErrorDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+    description: 'Unsupported media type',
     type: CommonErrorDto,
   })
   @UseInterceptors(
@@ -73,15 +80,14 @@ export class UsersController {
     @Body() createUserDto: CreateUserDto,
     @UploadedFile(
       new ParseFilePipeBuilder()
-        .addFileTypeValidator({ 
-          fileType: /(jpg|jpeg|png|webp)$/,
-          skipMagicNumbersValidation: true,
-          errorMessage: 'Only JPEG, PNG or WEBP images are allowed'
-        })
-        .addMaxSizeValidator({ maxSize: MAX_IMAGE_SIZE })
+        .addValidator(
+          new MaxFileSizeValidator({ 
+            maxImageSize: MAX_IMAGE_SIZE,
+            maxVideoSize: MAX_VIDEO_SIZE,
+          })
+        )
         .build({
           fileIsRequired: false,
-          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
         }),
     )
     profileImage: Express.Multer.File,
@@ -97,7 +103,68 @@ export class UsersController {
     };
   }
 
+  @Patch('/me')
+  @ApiDataResponse( 
+    UserResponseDTO,
+    HttpStatus.OK,
+    'Profile updated successfully',
+    ''
+  )
+  @ApiResponse({ 
+    status: 400, 
+    description: 'Bad request',
+    type: ValidationErrorResponseDto,
+  })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  @ApiResponse({
+    status: 422,
+    description: 'Unprocessable entity',
+    type: CommonErrorDto,
+  })
+  @ApiResponse({
+    status: 413,
+    description: 'Payload too large',
+    type: CommonErrorDto,
+  })
+  @ApiResponse({
+    status: HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+    description: 'Unsupported media type',
+    type: CommonErrorDto,
+  })
+  @UseInterceptors(
+    FileInterceptor('profileImage', {
+      storage: multerStorageConfig('profile-images'),
+      fileFilter: profileImageFileFilter,
+      limits: { fileSize: MAX_IMAGE_SIZE },
+    }),
+    FileCleanupInterceptor,
+  )
+  async updateProfile(
+    @Body() dto: UpdateProfileRequestDto,
+    @CurrentUser() currentUser: AuthUser,
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addValidator(
+          new MaxFileSizeValidator({ 
+            maxImageSize: MAX_IMAGE_SIZE,
+            maxVideoSize: MAX_VIDEO_SIZE,
+          })
+        )
+        .build({
+          fileIsRequired: false,
+        }),
+    )
+    profileImage?: Express.Multer.File,
+  ): Promise<AppApiResponse<UserResponseDTO>> {
+    const updated: UserResponseDTO = 
+      await this.usersService
+        .updateProfile(dto, currentUser, profileImage);
+    return { data: updated };
+  }
+
   @Patch('/:id')
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
   @ApiDataResponse( 
     UserResponseDTO,
     HttpStatus.OK,
@@ -120,6 +187,11 @@ export class UsersController {
     description: 'Payload too large',
     type: CommonErrorDto,
   })
+  @ApiResponse({
+    status: HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+    description: 'Unsupported media type',
+    type: CommonErrorDto,
+  })
   @UseInterceptors(
     FileInterceptor('profileImage', {
       storage: multerStorageConfig('profile-images'),
@@ -134,15 +206,14 @@ export class UsersController {
     @CurrentUser() currentUser: AuthUser,
     @UploadedFile(
       new ParseFilePipeBuilder()
-        .addFileTypeValidator({ 
-          fileType: /(jpg|jpeg|png|webp)$/,
-          skipMagicNumbersValidation: true,
-          errorMessage: 'Only JPEG, PNG or WEBP images are allowed'
-        })
-        .addMaxSizeValidator({ maxSize: MAX_IMAGE_SIZE })
+        .addValidator(
+          new MaxFileSizeValidator({ 
+            maxImageSize: MAX_IMAGE_SIZE,
+            maxVideoSize: MAX_VIDEO_SIZE,
+          })
+        )
         .build({
           fileIsRequired: false,
-          errorHttpStatusCode: HttpStatus.UNPROCESSABLE_ENTITY,
         }),
     )
     profileImage?: Express.Multer.File,
@@ -154,6 +225,8 @@ export class UsersController {
   }
 
   @Delete('/:id')
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
   @ApiResponse({ status: 204, description: 'User deleted successfully' })
   @ApiResponse({ status: 404, description: 'User not found' })
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -164,6 +237,8 @@ export class UsersController {
   }
 
   @Get('/:id')
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
   @ApiDataResponse( 
     UserResponseDTO,
     HttpStatus.OK,
@@ -179,6 +254,8 @@ export class UsersController {
   }
 
   @Get()
+  @UseGuards(RolesGuard)
+  @Roles('Admin')
   @ApiPaginatedResponse(UserResponseDTO)
   async findPaginated(
     @Query() query: PaginateUserDto

@@ -4,7 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, MoreThan, Repository } from 'typeorm';
 
 import { Category } from './category.entity.js';
 import { CreateCategoryDto } from './dto/create-category.dto.js';
@@ -16,6 +16,7 @@ import { Language } from '../language/language.entity.js';
 import slug from 'slug';
 import { Post } from '../post/post.entity.js';
 import { AuthUser } from '../auth/interfaces/auth-user.interface.js';
+import { PublicCategoryResponseDto } from './public/dto/public-category-response.dto.js';
 
 @Injectable()
 export class CategoryService {
@@ -49,7 +50,26 @@ export class CategoryService {
       )
     }
 
-    const category = CategoryMapper.toEntity(dto, userId, language.id);
+    // get latest category by ordered by row number
+    const latestCategory = await this.categoryRepository
+      .findOne({
+        where: {
+          langId: language.id,
+        },
+        select: {
+          rowNumber: true
+        },
+        order: {
+          rowNumber: 'DESC'
+        },
+      });
+
+    const category = CategoryMapper.toEntity(
+      dto, 
+      userId, 
+      language.id, 
+      latestCategory?.rowNumber ? latestCategory.rowNumber + 1 : 1
+    );
 
     const savedCategory = await this.categoryRepository.save(category);
     savedCategory.language = language;
@@ -70,7 +90,7 @@ export class CategoryService {
       .groupBy('category.id')
       .addGroupBy('category.name')
       .addGroupBy('category.langId')
-      .orderBy('category.id', 'DESC')
+      .orderBy('category.rowNumber', 'DESC')
       .getRawAndEntities();
 
     const countMap = new Map(
@@ -85,6 +105,25 @@ export class CategoryService {
     });
 
     return entities.map((item) => CategoryMapper.toReponse(item));
+  }
+
+  async findAllPublic(langId: number): Promise<PublicCategoryResponseDto[]> {
+    const categories = await this.categoryRepository
+      .find({
+        where: {
+          langId,
+        },
+        select: {
+          name: true,
+          slug: true,
+          rowNumber: true,
+        },
+        order: {
+          rowNumber: 'ASC'
+        }
+      })
+
+    return categories.map((item) => CategoryMapper.toReponsePublic(item));
   }
 
   async findOne(id: number, langId: number): Promise<CategoryResponseDto> {
@@ -220,23 +259,42 @@ export class CategoryService {
   }
 
   async remove(id: number, langId: number): Promise<void> {
-    const category = await this.categoryRepository.findOne({
-      where: { id, langId },
-    });
-
-    if (!category) {
-      throw new NotFoundException('Category not found');
-    }
-
-    const hasPost = await this.postRepository
-      .exists({
-        where: { categoryId: id },
+    await this.dataSource.transaction(async (manager) => {
+      
+      // find category
+      const category = await manager.findOne(Category, {
+        where: { 
+          id, 
+          langId,
+        },
       });
-
-    if (hasPost) {
-      throw new ConflictException('Category having posts forbidden to delete');
-    }
-
-    await this.categoryRepository.softDelete(id);
+  
+      if (!category) {
+        throw new NotFoundException('Category not found');
+      }
+  
+      const hasPost = await manager
+        .exists(Post, {
+          where: { categoryId: id },
+        });
+  
+      if (hasPost) {
+        throw new ConflictException('Category having posts forbidden to delete');
+      }
+  
+      // soft delete category
+      await manager.softDelete(Category, id);
+  
+      if (category.rowNumber) {
+        await manager
+          .createQueryBuilder()
+          .update(Category)
+          .set({
+            rowNumber: () => '`row_number` - 1',
+          })
+          .where('row_number > :number', { number: category.rowNumber })
+          .execute();
+      }
+    })
   }
 }

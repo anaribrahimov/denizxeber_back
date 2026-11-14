@@ -25,8 +25,7 @@ export class MailProcessor extends WorkerHost {
       title,
       excerpt,
       authorFullName,
-      coverImageOriginal,
-      coverImageThumbnail,
+      coverImageUrl,
       createdAt,
       url,
       languageName,
@@ -58,7 +57,7 @@ export class MailProcessor extends WorkerHost {
         authorFullName,
         postExcerpt: excerpt,
         postUrl: url,
-        postCoverImageUrl: coverImageOriginal,
+        postCoverImageUrl: coverImageUrl,
         unsubscribeUrl,
       },
       headers: {

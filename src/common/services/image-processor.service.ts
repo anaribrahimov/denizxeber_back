@@ -1,6 +1,7 @@
 import {
   Injectable,
 } from '@nestjs/common';
+import { rename, stat } from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
 
@@ -18,8 +19,9 @@ export interface ThumbnailResult {
   height: number;
   size: number;
   format: string;
-  thumbnailName: string;
-  thumbnailPath: string;
+  fileName: string;
+  filePath: string;
+  mimeType: string;
 }
 
 @Injectable()
@@ -37,51 +39,61 @@ export class ImageProcessorService {
     };
   }
 
-  needsThumbnail(
-    width: number | null,
-    height: number | null,
+  needsVersion(
+    imageWidth: number | null,
+    imageHeight: number | null,
+    versionWidth: number,
+    versionHeight: number,
   ): boolean {
     return (
-      (width ?? 0) > THUMBNAIL_SIZE ||
-      (height ?? 0) > THUMBNAIL_SIZE
+      (imageWidth ?? 0) > versionWidth ||
+      (imageHeight ?? 0) > versionHeight
     );
   }
 
-  async createThumbnail(
+  async resize(
     sourcePath: string,
-    // destinationPath: string,
-    destinationDir: string
+    destinationDir: string,
+    expectedWidth: number,
+    expectedHeight: number,
+    quality: number | null,
   ): Promise<ThumbnailResult> {
-    const metadata =
-      await sharp(sourcePath)
-        .resize({
-          width: THUMBNAIL_SIZE,
-          height: THUMBNAIL_SIZE,
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
-        .webp({
-          quality: THUMBNAIL_QUALITY,
-        })
-        // .toFile(destinationPath);
-        .toBuffer({ resolveWithObject: true });
-
-    const { width, height, size, format } = metadata.info;
 
     const ext = path.extname(sourcePath);
     const basename = path.basename(sourcePath, ext);
-    const thumbnailName = `${basename}-${width}x${height}.webp`;
-    const thumbnailPath = path.join(destinationDir, thumbnailName);
 
-    await sharp(metadata.data).toFile(thumbnailPath);
+    // First generate the image to a temporary file.
+    const tempPath = path.join(destinationDir, `${basename}-${expectedWidth}x${expectedHeight}-temp.webp`);
+
+    const metadata = await sharp(sourcePath)
+      .resize({
+        width: expectedWidth,
+        height: expectedHeight,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({
+        quality: quality ?? 100,
+      })
+      .toFile(tempPath);
+
+    const { width, height, size, format } = metadata;
+
+    const fileName = `${basename}-${width}x${height}.webp`;
+    const filePath = path.join(destinationDir, fileName);
+
+    await rename(tempPath, filePath);
+
+    const stats = await stat(filePath);
 
     return {
       width,
       height,
-      size,
+      size: stats.size,
       format,
-      thumbnailName,
-      thumbnailPath,
+      fileName,
+      filePath,
+      mimeType: 'image/webp',
     };
   }
 }
