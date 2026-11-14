@@ -29,4 +29,7 @@ export class CategoryResponseDto {
 
   // @ApiProperty()
   // isActive: boolean;
+
+  @ApiProperty()
+  rowNumber: number | null;
 }

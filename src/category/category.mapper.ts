@@ -5,12 +5,18 @@ import slug from "slug";
 
 export class CategoryMapper {
 
-  public static toEntity(dto: CreateCategoryDto, userId: number, langId: number) {
+  public static toEntity(
+    dto: CreateCategoryDto, 
+    userId: number, 
+    langId: number,
+    rowNumber: number | null,
+  ) {
     const category = new Category();
     category.langId = langId;
     category.name = dto.name;
     category.slug = slug(dto.name) + `-${Date.now()}`;
     category.userId = userId;
+    category.rowNumber = rowNumber;
     // category.isActive = typeof dto.isActive === 'boolean' ? dto.isActive : true;
     return category;
   }
@@ -25,6 +31,7 @@ export class CategoryMapper {
     dto.updatedAt = category.updatedAt;
     dto.postsCount = category.postsCount;
     // dto.isActive = category.isActive;
+    dto.rowNumber = category.rowNumber;
     return dto;
   }
 }
