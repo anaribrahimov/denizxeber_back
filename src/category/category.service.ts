@@ -16,6 +16,7 @@ import { Language } from '../language/language.entity.js';
 import slug from 'slug';
 import { Post } from '../post/post.entity.js';
 import { AuthUser } from '../auth/interfaces/auth-user.interface.js';
+import { PublicCategoryResponseDto } from './public/dto/public-category-response.dto.js';
 
 @Injectable()
 export class CategoryService {
@@ -104,6 +105,25 @@ export class CategoryService {
     });
 
     return entities.map((item) => CategoryMapper.toReponse(item));
+  }
+
+  async findAllPublic(langId: number): Promise<PublicCategoryResponseDto[]> {
+    const categories = await this.categoryRepository
+      .find({
+        where: {
+          langId,
+        },
+        select: {
+          name: true,
+          slug: true,
+          rowNumber: true,
+        },
+        order: {
+          rowNumber: 'ASC'
+        }
+      })
+
+    return categories.map((item) => CategoryMapper.toReponsePublic(item));
   }
 
   async findOne(id: number, langId: number): Promise<CategoryResponseDto> {

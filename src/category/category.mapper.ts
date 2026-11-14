@@ -2,6 +2,7 @@ import { Category } from "./category.entity.js";
 import { CategoryResponseDto } from "./dto/category-response.dto.js";
 import { CreateCategoryDto } from "./dto/create-category.dto.js";
 import slug from "slug";
+import { PublicCategoryResponseDto } from "./public/dto/public-category-response.dto.js";
 
 export class CategoryMapper {
 
@@ -31,6 +32,14 @@ export class CategoryMapper {
     dto.updatedAt = category.updatedAt;
     dto.postsCount = category.postsCount;
     // dto.isActive = category.isActive;
+    dto.rowNumber = category.rowNumber;
+    return dto;
+  }
+
+  public static toReponsePublic(category: Category) {
+    const dto = new PublicCategoryResponseDto();
+    dto.name = category.name;
+    dto.slug = category.slug;
     dto.rowNumber = category.rowNumber;
     return dto;
   }
