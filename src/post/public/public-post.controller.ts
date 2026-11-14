@@ -55,7 +55,7 @@ export class PublicPostController {
     }
   }
 
-  @Get('/top-3-posts-per-category-slider-posts-other-posts')
+  @Get('/all-news')
   @Public()
   @UseGuards(LanguageQueryGuard)
   @ApiDataArrayResponse(
@@ -71,7 +71,7 @@ export class PublicPostController {
     type: CommonErrorDto
   })
   @HttpCode(HttpStatus.OK)
-  public async getTop3PostsPerCategoryAndSliderPostsAndOtherPosts(
+  public async allNews(
     @Query() dto: LangCodeQueryDto,
     @CurrentLanguage() currentLang: Language,
   ): Promise<AppApiResponse<CategoryAndSliderPostsResponseDto>> {
