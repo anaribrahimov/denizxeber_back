@@ -916,14 +916,15 @@ export class PostService {
       top3PostsPerCategory: top3PostsPerCategory
         .reduce(
           (acc: CategoryPostItem[], post: Post) => {
-            const el = acc.find((item) => item.categoryId === post.category.id);
+            const el = acc.find((item) => item.categorySlug === post.category.slug);
             post.coverImage = post.coverImageId
               ? coverImagesMap.get(post.coverImageId) as Upload
               : null;
             const postDto = PublicPostMapper.toDto(post, this.filesPublicUrl);
             if (!el) {
               acc.push({
-                categoryId: post.category.id,
+                categoryName: post.category.name,
+                categorySlug: post.category.slug,
                 posts: [postDto]
               });
             } else {
