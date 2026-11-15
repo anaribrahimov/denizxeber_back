@@ -3,7 +3,7 @@ allowBuilds:
   '@scarf/scarf': true
   bcrypt: true
   cpu-features: true
-  esbuild: set this to true or false
+  esbuild: true
   msgpackr-extract: true
   protobufjs: true
   ssh2: true
