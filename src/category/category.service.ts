@@ -292,7 +292,13 @@ export class CategoryService {
           .set({
             rowNumber: () => '`row_number` - 1',
           })
-          .where('row_number > :number', { number: category.rowNumber })
+          .where('row_number > :number', { 
+            number: category.rowNumber 
+          })
+          .andWhere('lang_id = :langId', {
+            langId
+          })
+          .andWhere('deleted_at is null')
           .execute();
       }
     })
