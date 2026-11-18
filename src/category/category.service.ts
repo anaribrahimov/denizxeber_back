@@ -90,7 +90,7 @@ export class CategoryService {
       .groupBy('category.id')
       .addGroupBy('category.name')
       .addGroupBy('category.langId')
-      .orderBy('category.rowNumber', 'DESC')
+      .orderBy('category.rowNumber', 'ASC')
       .getRawAndEntities();
 
     const countMap = new Map(

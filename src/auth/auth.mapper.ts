@@ -56,6 +56,7 @@ export class AuthMapper {
                     id: item.id,
                     name: item.name,
                     slug: item.slug,
+                    rowNumber: item.rowNumber,
                   } as Category)
                 )
             } as LoginResponseCategoryItem

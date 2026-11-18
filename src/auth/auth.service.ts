@@ -83,7 +83,10 @@ export class AuthService {
         where: {
           langId: In(user.langIds),
           // isActive: true
-        }
+        },
+        order: {
+          rowNumber: 'ASC',
+        },
       });
     }
 

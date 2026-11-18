@@ -14,6 +14,7 @@ class Category {
   id: number;
   name: string;
   slug: string;
+  rowNumber: number | null;
 }
 
 export class LoginResponseCategoryItem {
