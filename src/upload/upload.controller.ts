@@ -1,6 +1,6 @@
-import { BadRequestException, Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseIntPipe, PayloadTooLargeException, Post, Query, UnprocessableEntityException, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
+import { Controller, Delete, Get, HttpCode, HttpStatus, Param, ParseFilePipeBuilder, ParseIntPipe, Post, Query, UploadedFile, UseGuards, UseInterceptors } from "@nestjs/common";
 import { UploadService } from "./upload.service.js";
-import { ApiConsumes, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBody, ApiConsumes, ApiOperation, ApiResponse, ApiTags } from "@nestjs/swagger";
 import { FileInterceptor } from "@nestjs/platform-express";
 import { commonUploadFilter, MAX_IMAGE_SIZE, MAX_VIDEO_SIZE, multerStorageConfig } from "../common/multer/multer.config.js";
 import { FileCleanupInterceptor } from "../common/interceptors/file-cleanup.interceptor.js";
@@ -42,6 +42,18 @@ export class UploadController {
   @Post()
   @ApiOperation({ summary: 'Upload a new file' })
   @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['file'],
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        }
+      }
+    }
+  })
   @ApiDataResponse( 
     UploadResponseDto,
     HttpStatus.CREATED,

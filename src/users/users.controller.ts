@@ -20,6 +20,7 @@ import { AppApiResponse } from "../common/interfaces/app-api-response.interface.
 import { ApiPaginatedResponse } from "../common/decorators/api-paginated-response.decorator.js";
 import { UpdateProfileRequestDto } from "./dto/update-profile-request.dto.js";
 import { MaxFileSizeValidator } from "../common/validators/max-file-size-validator.pipe.js";
+import { ValidationException } from "../common/exceptions/validation.exception.js";
 
 @Controller('/users')
 @ApiTags('Users')
@@ -104,6 +105,7 @@ export class UsersController {
   }
 
   @Patch('/me')
+  @ApiConsumes('multipart/form-data')
   @ApiDataResponse( 
     UserResponseDTO,
     HttpStatus.OK,
@@ -156,6 +158,15 @@ export class UsersController {
     )
     profileImage?: Express.Multer.File,
   ): Promise<AppApiResponse<UserResponseDTO>> {
+    if (
+      dto.firstName == undefined
+      && dto.lastName == undefined
+      && dto.password == undefined
+      && dto.removeProfileImage == undefined
+      && !profileImage
+    ) {
+      throw new ValidationException({}, 'Not any params sent to update');
+    }
     const updated: UserResponseDTO = 
       await this.usersService
         .updateProfile(dto, currentUser, profileImage);
@@ -165,6 +176,7 @@ export class UsersController {
   @Patch('/:id')
   @UseGuards(RolesGuard)
   @Roles('Admin')
+  @ApiConsumes('multipart/form-data')
   @ApiDataResponse( 
     UserResponseDTO,
     HttpStatus.OK,
@@ -218,6 +230,18 @@ export class UsersController {
     )
     profileImage?: Express.Multer.File,
   ): Promise<AppApiResponse<UserResponseDTO>> {
+    if (
+      updateUserDto.firstName == undefined
+      && updateUserDto.lastName == undefined
+      && updateUserDto.isActive == undefined
+      && updateUserDto.langIds == undefined
+      && updateUserDto.password == undefined
+      && updateUserDto.roleId == undefined
+      && updateUserDto.removeProfileImage == undefined
+      && !profileImage
+    ) {
+      throw new ValidationException({}, 'Not any params sent to update');
+    }
     const updated: UserResponseDTO = 
       await this.usersService
         .update(id, updateUserDto, currentUser, profileImage);

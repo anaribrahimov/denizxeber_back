@@ -1,3 +1,4 @@
+import { ApiPropertyOptional } from "@nestjs/swagger";
 import { Transform } from "class-transformer";
 import { ArrayNotEmpty, IsArray, IsBoolean, IsIn, IsInt, IsNotEmpty, IsOptional, IsString, Matches, MaxLength, MinLength, ValidateIf } from "class-validator";
 // import { IsMatch } from "../../common/validators/is-match.validator.js";
@@ -73,4 +74,14 @@ export class UpdateProfileRequestDto {
     return value;
   })
   removeProfileImage?: boolean;
+
+  // it is only added for passing validation forbidNonWhitelisted
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    required: false,
+    description: 'User profile image',
+  })
+  @IsOptional()
+  private profileImage?: any;
 }

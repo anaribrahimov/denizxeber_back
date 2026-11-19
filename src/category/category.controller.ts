@@ -19,6 +19,7 @@ import { ApiDataResponse } from "../common/decorators/api-data-response.decorato
 import { CategoryResponseDto } from "./dto/category-response.dto.js";
 import { AppApiResponse } from "../common/interfaces/app-api-response.interface.js";
 import { ApiDataArrayResponse } from "../common/decorators/api-data-array-response.decorator.js";
+import { ValidationException } from "../common/exceptions/validation.exception.js";
 
 @Controller('/:lang/categories')
 @UseGuards(RolesGuard)
@@ -90,6 +91,12 @@ export class CategoryController {
     @CurrentLanguage() language: Language,
     @CurrentUser() authUser: AuthUser,
   ): Promise<AppApiResponse<CategoryResponseDto>> {
+    if (
+      dto.name === undefined
+      && dto.changePostsCategoryId === undefined
+    ) {
+      throw new ValidationException({}, 'Not any params sent to update');
+    }
     const category = await this.categoryService.update(id, dto, language.id, authUser);
     return {
       message: 'Category successfully updated',

@@ -141,7 +141,7 @@ export class PostController {
       && dto.statusId === undefined
       && dto.title === undefined
     ) {
-      throw new ValidationException({}, 'Nothing send to update');
+      throw new ValidationException({}, 'Not any params sent to update');
     }
     return {
       data: await this.postService.update(id, dto, userPrincipal),

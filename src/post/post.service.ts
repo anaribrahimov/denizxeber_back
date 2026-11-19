@@ -318,7 +318,7 @@ export class PostService {
       );
   
       if (!hasChanges) {
-        throw new ValidationException({}, 'Nothing send to update');
+        throw new ValidationException({}, 'Not any params sent to update');
       }
   
       // find post cover image

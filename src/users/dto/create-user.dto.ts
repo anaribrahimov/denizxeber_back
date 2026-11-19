@@ -13,6 +13,7 @@ import {
   MinLength
 } from 'class-validator';
 import { Transform } from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 // import { IsMatch } from '../../common/validators/is-match.validator.js';
 
 export class CreateUserDto {
@@ -129,4 +130,14 @@ export class CreateUserDto {
     return value;
   })
   isActive?: boolean;
+
+  // it is only added for passing validation forbidNonWhitelisted
+  @ApiPropertyOptional({
+    type: 'string',
+    format: 'binary',
+    required: false,
+    description: 'User profile image',
+  })
+  @IsOptional()
+  private profileImage?: any;
 }
