@@ -1,15 +1,15 @@
 import {
   BadRequestException,
+  HttpStatus,
   ValidationPipe,
 } from '@nestjs/common';
 import { ValidationError } from 'class-validator';
-import { CreateUserDto } from '../../users/dto/create-user.dto.js';
 
 export class AppValidationPipe extends ValidationPipe {
   constructor() {
     super({
       whitelist: true,
-      // forbidNonWhitelisted: true,
+      forbidNonWhitelisted: true,
       transform: true,
 
       exceptionFactory: (errors: ValidationError[]) => {
@@ -26,7 +26,7 @@ export class AppValidationPipe extends ValidationPipe {
         }
 
         return new BadRequestException({
-          statusCode: 400,
+          statusCode: HttpStatus.BAD_REQUEST,
           message: 'Validation failed',
           errors: formattedErrors,
         });
