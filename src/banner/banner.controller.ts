@@ -56,8 +56,8 @@ export class BannerController {
   }
 
   @Get()
-  @Public()
-  @UseGuards(LanguageQueryGuard)
+  @UseGuards(LanguageQueryGuard, RolesGuard)
+  @Roles('Admin')
   @ApiDataArrayResponse(BannerDto, HttpStatus.OK, '', '')
   @HttpCode(HttpStatus.CREATED)
   public async findAll(

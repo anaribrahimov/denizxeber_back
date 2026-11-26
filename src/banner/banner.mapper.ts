@@ -7,6 +7,8 @@ import { Banner } from './banner.entity.js';
 import { BannerCoverImageDto, BannerCoverImageVersionItemDto } from './dto/banner-cover-image.dto.js';
 import { BannerDto } from './dto/banner.dto.js';
 import { CreateBannerDto } from './dto/create-banner.dto.js';
+import { BannerPublicCoverImageDto, BannerPublicCoverImageVersionItemDto } from './public/dto/banner-public-cover-image.dto.js';
+import { BannerResponsePublicDto } from './public/dto/banner-response-public.dto.js';
 
 export class BannerMapper {
 
@@ -51,5 +53,33 @@ export class BannerMapper {
     banner.coverImageId = dto.coverImageId.toString();
     banner.link = dto.link ?? null;
     return banner;
+  }
+
+  static toPublicDto(banner: Banner, publicUrl: string): BannerResponsePublicDto {
+    const coverImageDto = new BannerPublicCoverImageDto();
+    coverImageDto.previewUrl = 
+      createPreviewUrl(publicUrl, banner.coverImage.fileKey);
+    coverImageDto.width = banner.coverImage.fileWidth;
+    coverImageDto.height = banner.coverImage.fileHeight;
+    coverImageDto.size = banner.coverImage.fileSizeByte;
+    coverImageDto.versions = [];
+    if (banner.coverImage.versions?.length) {
+      banner.coverImage.versions.forEach((item: UploadVersion) => {
+        coverImageDto?.versions.push({
+          version: item.version,
+          previewUrl: createPreviewUrl(publicUrl, item.fileKey),
+          width: item.fileWidth,
+          height: item.fileHeight,
+          size: item.fileSizeByte,
+        } as BannerPublicCoverImageVersionItemDto);
+      })
+    }
+
+    const dto = new BannerResponsePublicDto();
+    dto.bannerName = banner.bannerName.name;
+    dto.coverImage = coverImageDto;
+    dto.link = banner.link ?? null;
+    
+    return dto;
   }
 }

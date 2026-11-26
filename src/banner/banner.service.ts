@@ -13,6 +13,7 @@ import { LanguageDto } from "../language/dto/language.dto.js";
 import { ConfigService } from "@nestjs/config";
 import { UpdateBannerDto } from "./dto/update-banner.dto.js";
 import { IMAGE_MIME_TYPES } from "../common/multer/multer.config.js";
+import { BannerResponsePublicDto } from "./public/dto/banner-response-public.dto.js";
 
 export const BANNER_IMAGE_MIME_TYPES = Object.keys(IMAGE_MIME_TYPES);
 
@@ -224,5 +225,25 @@ export class BannerService {
         }
       });
     return banners.map((banner) => BannerMapper.toDto(banner, this.filesPublicUrl));
+  }
+
+  async findAllPublic(langId: number): Promise<BannerResponsePublicDto[]> {
+    const banners = await this.bannerRepository
+      .find({
+        where: {
+          langId: langId,
+        },
+        relations: {
+          bannerName: true,
+          language: true,
+          coverImage: {
+            versions: true
+          }
+        },
+        order: {
+          id: 'ASC'
+        }
+      });
+    return banners.map((banner) => BannerMapper.toPublicDto(banner, this.filesPublicUrl));
   }
 }
