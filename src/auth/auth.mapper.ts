@@ -8,6 +8,7 @@ import { createPreviewUrl } from "../common/utils/media.util.js";
 import { prioritiesCached } from "../priority/priority.cache.js";
 import { AuthProfileImageDto, AuthProfileImageVersionItemDto } from "./dto/auth-profile-image.dto.js";
 import { UploadVersion } from "../upload/upload-version.entity.js";
+import { BannerNameDto } from "../banner-name/dto/banner-name.dto.js";
 
 export class AuthMapper {
 
@@ -15,6 +16,7 @@ export class AuthMapper {
     accessToken: string,
     user: ValidatedUserDto,
     categories: Category[],
+    banners: BannerNameDto[],
   ): LoginResponseDto {
     const response: LoginResponseDto = new LoginResponseDto;
     response.accessToken = accessToken;
@@ -68,6 +70,7 @@ export class AuthMapper {
       prioritiesCached.updating,
       prioritiesCached.updated,
     ]
+    response.banners = banners ?? [];
     return response;
   }
 

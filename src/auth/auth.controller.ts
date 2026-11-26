@@ -55,9 +55,10 @@ export class AuthController {
       refreshExpiresAt,
       user,
       categories,
+      banners,
     } = await this.authService.login(req.user as any, meta(req));
     setRefreshCookie(res, refreshToken, refreshExpiresAt, this.config);
-    return AuthMapper.toLoginResponseDto(accessToken, user, categories);
+    return AuthMapper.toLoginResponseDto(accessToken, user, categories, banners);
   }
 
   @Public()

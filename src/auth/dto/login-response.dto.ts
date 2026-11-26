@@ -1,4 +1,5 @@
 // import { ApiProperty } from "@nestjs/swagger";
+import { BannerNameDto } from "../../banner-name/dto/banner-name.dto.js";
 import { PriorityDto } from "../../priority/dto/priority.dto.js";
 import { Status } from "../../status/status.entity.js";
 import { ValidatedUserDto } from "./validated-user.dto.js";
@@ -39,4 +40,6 @@ export class LoginResponseDto {
   statuses: Status[];
 
   priorities: PriorityDto[];
+
+  banners: BannerNameDto[];
 }

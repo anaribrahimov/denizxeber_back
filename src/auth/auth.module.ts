@@ -15,11 +15,12 @@ import { RefreshTokenService } from './refresh-token.service.js';
 import { RefreshTokenCleanupTask } from './refresh-token-cleanup.task.js';
 import { Category } from '../category/category.entity.js';
 import { UploadModule } from '../upload/upload.module.js';
+import { BannerName } from '../banner-name/banner-name.entity.js';
 
 @Module({
   imports: [
     PassportModule,
-    TypeOrmModule.forFeature([User, RefreshToken, Category]),
+    TypeOrmModule.forFeature([User, RefreshToken, Category, BannerName]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

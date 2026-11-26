@@ -138,7 +138,7 @@ import { languageCodes } from './language/language.cache.js';
     AuthModule,
     CategoryModule,
     PostModule,
-    BannerNameModule,
+    // BannerNameModule,
     BannerModule,
     SubscriberModule,
     MailModule,

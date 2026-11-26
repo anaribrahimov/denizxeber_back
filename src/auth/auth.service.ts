@@ -12,6 +12,8 @@ import { Category } from '../category/category.entity.js';
 import { AuthMapper } from './auth.mapper.js';
 import { ValidatedUserDto } from './dto/validated-user.dto.js';
 import { UploadService } from '../upload/upload.service.js';
+import { BannerName } from '../banner-name/banner-name.entity.js';
+import { BannerNameMapper } from '../banner-name/banner-name.mapper.js';
 
 @Injectable()
 export class AuthService {
@@ -27,6 +29,8 @@ export class AuthService {
     private jwtService: JwtService,
     private refreshTokenService: RefreshTokenService,
     private readonly uploadService: UploadService,
+    @InjectRepository(BannerName)
+    private readonly bannerNameRepository: Repository<BannerName>,
   ) {
     this.publicUrl = this.uploadService.getPublicUrl();
   }
@@ -99,12 +103,21 @@ export class AuthService {
       refreshExpiresAt,
     } = await this.issueTokens(user.id.toString(), user.email, user.role, meta);
 
+    const banners = await this.bannerNameRepository
+      .find({
+        order: {
+          id: 'ASC'
+        }
+      })
+      .then((data) => data.map(BannerNameMapper.toDto))
+
     return {
       accessToken,
       refreshToken,
       refreshExpiresAt,
       user,
       categories,
+      banners,
     }
   }
 
