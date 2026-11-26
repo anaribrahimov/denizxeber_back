@@ -1,5 +1,5 @@
 import { IsIn, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class PaginateUserDto {
 
@@ -16,6 +16,9 @@ export class PaginateUserDto {
   @Max(100)
   limit: number = 1;
 
+  @Transform(({ value }) => {
+    return value ? value.trim() : value;
+  })
   @IsOptional()
   @IsString()
   search?: string;
